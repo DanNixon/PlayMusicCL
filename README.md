@@ -3,6 +3,8 @@ PlayMusicCL
 
 A command line client for Google Play Music.
 
+This script requires Simon Weber's [Google Play Music API](https://github.com/simon-weber/Unofficial-Google-Music-API)
+
 Beofre use ensure to set up your username and password for Google Play and Last.fm in the script.
 
 From a terminal "cd" to the script and execute it like any other Python script with "python PlayMusicCL.py", you then have access to the following commands:
