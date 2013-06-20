@@ -26,4 +26,5 @@ From a terminal "cd" to the script and execute it like any other Python script w
 -	QUEUE [artist] - Adds all songs by specified artist to queue.
 -	QUEUE [artist] [album] - Adds all songs by specified album to queue.
 -	QUEUE [artist] [album] [song] - Adds specified song to queue.
+
 Note that "n" and "pn" are optional parameters and both default to 1, "pn" denotes the number of the page to display.
