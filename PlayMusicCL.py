@@ -4,8 +4,8 @@
 ## Command line client for Google Play Music
 ## Copyright: Dan Nixon 2012-13
 ## dan-nixon.com
-## Version: 0.3.0
-## Date: 18/06/2013
+## Version: 0.3.2
+## Date: 09/08/2013
 
 import thread, time, shlex, random, sys
 from gmusicapi import Webclient
@@ -81,6 +81,7 @@ class gMusicClient(object):
 		plists = self.api.get_all_playlist_ids(auto=True, user=True)
 		for u_playlist, u_playlist_id in plists["user"].iteritems():
 			self.playlists[u_playlist] = self.api.get_playlist_songs(u_playlist_id[0])
+		self.playlists["Thumbs Up"] = [song for song in songs if song['rating'] == 5]
 
 	def getSongStream(self, song):
 		url = self.api.get_stream_urls(song["id"])[0]
@@ -196,24 +197,27 @@ class lastfmScrobbler(object):
 	API_KEY = "a0790cb91b8799b0eda1f60d3924b676"
 	API_SECRET = "5007f138c5fef4278f36c70d760f24b7"
 	session = None
+	enabled = False
 	
-	def __init__(self, username, password):
+	def __init__(self, username, password, use):
 		password_hash = pylast.md5(password)
-		self.session = pylast.LastFMNetwork(api_key = self.API_KEY, api_secret = self.API_SECRET, username = username, password_hash = password_hash)
+		if use:
+			self.session = pylast.LastFMNetwork(api_key = self.API_KEY, api_secret = self.API_SECRET, username = username, password_hash = password_hash)
+		self.enabled = use
 	
 	def loveSong(self, song):
-		if not song == None:
+		if not song == None and self.enabled:
 			print "Loving {0} by {1} on Last.fm.".format(song["title"].encode("utf-8"), song["artist"].encode("utf-8"))
 			thread.start_new_thread(self.workerFunction, (1, song))
 		else:
-			print "No song playing."
+			print "No song playing or Last.fm disabled."
 	
 	def updateNowPlaying(self, song):
-		if not song == None:
+		if not song == None and self.enabled:
 			thread.start_new_thread(self.workerFunction, (2, song))
 		
 	def scrobbleSong(self, song):
-		if not song == None:
+		if not song == None and self.enabled:
 			thread.start_new_thread(self.workerFunction, (3, song))
 	
 	def workerFunction(self, function, song):
@@ -274,6 +278,14 @@ class commandLineHandler(object):
 			if case("PLAY"):
 				global m_player
 				m_player.togglePlayback()
+				break
+			if case("LOVE"):
+				global last_fm
+				global m_client
+				global m_player
+				print ""
+				last_fm.loveSong(m_player.now_playing_song)
+				m_client.thumbsUp(m_player.now_playing_song)
 				break
 			if case("LIKE"):
 				global last_fm
@@ -526,10 +538,10 @@ def main():
 	title_string = "\x1b]2;Google Play Music\x07"
 	sys.stdout.write(title_string)
 	print "Logging in to Google Play Music...",
-	m_client = gMusicClient("GOOGLE USERNAME", "GOOGLE PASS")
+	m_client = gMusicClient("GOOGLE_USER", "GOOGLE_PASS")
 	print "done."
 	print "Logging in to Last.fm...",
-	last_fm = lastfmScrobbler("LAST FM USERNAME", "LAST FM PASS")
+	last_fm = lastfmScrobbler("LAST_FM_USER", "LAST_FM_PASS", False) ##Set to True if using Last.fm
 	print "done."
 	print "Creating GStreamer player...",
 	m_player = mediaPlayer()
