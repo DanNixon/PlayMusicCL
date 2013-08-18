@@ -4,7 +4,7 @@
 ## Command line client for Google Play Music
 ## Copyright: Dan Nixon 2012-13
 ## dan-nixon.com
-## Version: 0.3.4
+## Version: 0.3.5
 ## Date: 18/08/2013
 
 import thread, time, shlex, random, sys
@@ -17,6 +17,7 @@ import gst
 m_client = None
 m_player = None
 last_fm = None
+clh = None
 run = True
 
 class switch(object):
@@ -54,9 +55,7 @@ class gMusicClient(object):
 			attempts += 1
 
 	def __del__(self):
-		print "Logging out of Google Play Music...",
 		self.api.logout()
-		print "done."
 
 	def updateLocalLib(self):
 		songs = list()
@@ -111,9 +110,22 @@ class mediaPlayer(object):
 	def __del__(self):
 		self.now_playing_song = None
 		self.player.set_state(gst.STATE_NULL)
-		
-	def getPlayingSong(self):
-		return self.now_playing_song
+	
+	def print_current_song(self):
+		song = self.now_playing_song
+		if not song is None:
+			track = m_player.now_playing_song["title"]
+			artist = m_player.now_playing_song["artist"]
+			print "Now playing {0} by {1}".format(track.encode("utf-8"), artist.encode("utf-8"))
+		else:
+			print "No song playing."
+
+	def set_terminal_title(self):
+		if self.now_playing_song == None or self.player.get_state()[1] == gst.STATE_PAUSED:
+			sys.stdout.write("\x1b]2;Google Play Music\x07")
+			return
+		title_string = "\x1b]2;{0} - {1}\x07".format(self.now_playing_song["title"].encode("utf-8"), self.now_playing_song["artist"].encode("utf-8"))
+		thread.start_new_thread(cl_print, (title_string, 1))
 	
 	def playerThread(self):
 		if self.player == None:
@@ -133,9 +145,8 @@ class mediaPlayer(object):
 			self.player.set_property("uri", song_url)
 			self.player.set_state(gst.STATE_PLAYING)
 			self.now_playing_song = song
-			print "Now playing {0} by {1}".format(song["title"].encode("utf-8"), song["artist"].encode("utf-8"))
-			title_string = "\x1b]2;{0} - {1}\x07".format(song["title"].encode("utf-8"), song["artist"].encode("utf-8"))
-			sys.stdout.write(title_string)
+			self.print_current_song()
+			self.set_terminal_title()
 			last_fm.updateNowPlaying(song)
 		except AttributeError:
 			print "Player error!"
@@ -145,10 +156,13 @@ class mediaPlayer(object):
 			player_state = self.player.get_state()[1]
 			if player_state == gst.STATE_PAUSED:
 				self.player.set_state(gst.STATE_PLAYING)
+				self.set_terminal_title()
 				print "Resumng playback."
 			elif player_state == gst.STATE_PLAYING:
 				self.player.set_state(gst.STATE_PAUSED)
+				self.set_terminal_title()
 				print "Pauseing playback."
+				print ""
 			elif player_state == gst.STATE_NULL:
 				self.playNextInQueue(1)
 		except AttributeError:
@@ -160,8 +174,6 @@ class mediaPlayer(object):
 			self.now_playing_song = None
 		except AttributeError:
 			print "Player error!"
-		title_string = "\x1b]2;Google Play Music\x07"
-		sys.stdout.write(title_string)
 
 	def songEndHandle(self, bus, message):
 		if message.type == gst.MESSAGE_EOS:
@@ -181,6 +193,7 @@ class mediaPlayer(object):
 				self.playNextInQueue(1)
 			else:
 				self.stopPlayback()
+				self.set_terminal_title()
 
 	def addToQueue(self, song):
 		self.queue.append(song)
@@ -254,10 +267,15 @@ class commandLineHandler(object):
 	SINGLE_PG_LEN = 20
 	
 	def __del__(self):
-		title_string = "\x1b]2;Terminal\x07"
+		title_string = "\x1b]2;I played music once, but then I took a SIGTERM to the thread.\x07"
 		sys.stdout.write(title_string)
 	
 	def parseCL(self, in_string):
+		if len(in_string) is 0:
+			global m_player
+			m_player.print_current_song()
+			print ""
+			return
 		function = None
 		f_args = None
 		try:
@@ -268,9 +286,11 @@ class commandLineHandler(object):
 		for case in switch(function):
 			if case("LIST"):
 				self.listHandler(args)
+				print ""
 				break
 			if case("QUEUE"):
 				self.queueHandler(args)
+				print ""
 				break
 			if case("PAUSE"):
 				global m_player
@@ -280,22 +300,21 @@ class commandLineHandler(object):
 				global m_player
 				m_player.togglePlayback()
 				break
-			if case("LOVE"):
-				global last_fm
-				global m_client
-				global m_player
-				last_fm.loveSong(m_player.now_playing_song)
-				m_client.thumbsUp(m_player.now_playing_song)
-				break
 			if case("LIKE"):
 				global last_fm
 				global m_client
 				global m_player
 				last_fm.loveSong(m_player.now_playing_song)
 				m_client.thumbsUp(m_player.now_playing_song)
+				print ""
+				break
+			if case("LOVE"):
+				self.parseCL("LIKE")
+				return
 				break
 			if case("PMODE"):
 				self.pmHandler(args)
+				print ""
 				break
 			if case("NEXT"):
 				global m_player
@@ -309,13 +328,8 @@ class commandLineHandler(object):
 				break
 			if case("NOW"):
 				global m_player
-				song = m_player.now_playing_song
-				if not song is None:
-					track = m_player.now_playing_song["title"]
-					artist = m_player.now_playing_song["artist"]
-					print "Now playing {0} by {1}".format(track.encode("utf-8"), artist.encode("utf-8"))
-				else:
-					print "No song playing."
+				m_player.print_current_song()
+				print ""
 				break
 			if case("EXIT"):
 				global run
@@ -324,7 +338,7 @@ class commandLineHandler(object):
 				break
 			if case():
 				print "Argument error!"
-		print ""
+				print ""
 
 	def queueHandler(self, args):
 		global m_player
@@ -519,6 +533,9 @@ class commandLineHandler(object):
 				print "Play mode: Random, Repeat"
 				break
 
+def cl_print(console_string, *args):
+	print console_string
+
 def main():
 	global m_player
 	global m_client
@@ -527,9 +544,9 @@ def main():
 	title_string = "\x1b]2;Google Play Music\x07"
 	sys.stdout.write(title_string)
 	print "Logging in to Google Play Music..."
-	m_client = gMusicClient("GOOGLE_USER", "GOOGLE_PASS") #See README
+	m_client = gMusicClient("GOOGLE_USER", "GOOGLE_PASS")
 	print "Logging in to Last.fm..."
-	last_fm = lastfmScrobbler("LASTFM_USER", "LASTFM_PASS", False) #See README
+	last_fm = lastfmScrobbler("LASTFM_USER", "LASTFM_PASS", False)
 	print "Creating GStreamer player..."
 	m_player = mediaPlayer()
 	print "Updating local library from Google Play Music..."
@@ -539,7 +556,7 @@ def main():
 	print ""
 	global run
 	while run:
-		clh.parseCL(raw_input(">"))
+		clh.parseCL(raw_input())
 	thread.exit()
 
 gobject.threads_init()

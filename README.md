@@ -3,9 +3,9 @@ PlayMusicCL
 
 A command line client for Google Play Music.
 
-This script requires Simon Weber's [Google Play Music API](https://github.com/simon-weber/Unofficial-Google-Music-API)
+This script requires Simon Weber's [Google Play Music API](https://github.com/simon-weber/Unofficial-Google-Music-API) and if Last.fm features are desired, [PyLast](https://code.google.com/p/pylast/).
 
-Beofre use ensure to set up your username and password for Google Play and Last.fm are setup in the script, alternatively you can pass empty strings for the password fields to use ```getpass()``` to retrieve passwords from the user on startup.
+Before use ensure to set up your username and password for Google Play and Last.fm are setup in the script, alternatively you can pass empty strings for the password fields to use ```getpass()``` to retrieve passwords from the user on startup.
 
 It is possible to disable Last.fm integration by leaving the boolean on the Last.fm login call as ```False```, note that this must be changed to ```True``` in order to use Last.fm features.
 
@@ -17,6 +17,7 @@ From a terminal "cd" to the script and execute it like any other Python script w
 -	LOVE - Save as LIKE
 -	EXIT - Exits.
 -	NOW - Shows the title and artist of the currently playing song.
+- [empty] (i.e. just pressing return) - Same as NOW
 -	NEXT (n) - Plays the nth song after the current song (n has no effect in random play mode, n can also be negative to skip back through tracks).
 -	PMODE [random/linear] [repeat/no repeat] - Specifies play options, if you have used any other media player they should be self explanatory.
 -	LIST (pn) - Shows a list of all artists.
