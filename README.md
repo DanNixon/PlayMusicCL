@@ -14,6 +14,7 @@ From a terminal "cd" to the script and execute it like any other Python script w
 -	PLAY - Pauses or unpauses playback.
 -	PAUSE - Same as PLAY.
 -	LIKE - Loves the current song on Last.fm and gives it a Thumbs Up on Google Play.
+-	LOVE - Save as LIKE
 -	EXIT - Exits.
 -	NOW - Shows the title and artist of the currently playing song.
 -	NEXT (n) - Plays the nth song after the current song (n has no effect in random play mode, n can also be negative to skip back through tracks).
