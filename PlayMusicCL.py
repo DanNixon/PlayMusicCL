@@ -4,13 +4,12 @@
 ## Command line client for Google Play Music
 ## Copyright: Dan Nixon 2012-13
 ## dan-nixon.com
-## Version: 0.3.2
-## Date: 09/08/2013
+## Version: 0.3.3
+## Date: 18/08/2013
 
 import thread, time, shlex, random, sys
 from gmusicapi import Webclient
 from operator import itemgetter
-import pylast
 import gobject, glib, pygst
 import gst
 
@@ -131,7 +130,6 @@ class mediaPlayer(object):
 			self.player.set_property("uri", song_url)
 			self.player.set_state(gst.STATE_PLAYING)
 			self.now_playing_song = song
-			print ""
 			print "Now playing {0} by {1}".format(song["title"].encode("utf-8"), song["artist"].encode("utf-8"))
 			title_string = "\x1b]2;{0} - {1}\x07".format(song["title"].encode("utf-8"), song["artist"].encode("utf-8"))
 			sys.stdout.write(title_string)
@@ -144,11 +142,9 @@ class mediaPlayer(object):
 			player_state = self.player.get_state()[1]
 			if player_state == gst.STATE_PAUSED:
 				self.player.set_state(gst.STATE_PLAYING)
-				print ""
 				print "Resumng playback."
 			elif player_state == gst.STATE_PLAYING:
 				self.player.set_state(gst.STATE_PAUSED)
-				print ""
 				print "Pauseing playback."
 			elif player_state == gst.STATE_NULL:
 				self.playNextInQueue(1)
@@ -160,7 +156,6 @@ class mediaPlayer(object):
 			self.player.set_state(gst.STATE_NULL)
 			self.now_playing_song = None
 		except AttributeError:
-			print ""
 			print "Player error!"
 		title_string = "\x1b]2;Google Play Music\x07"
 		sys.stdout.write(title_string)
@@ -200,8 +195,9 @@ class lastfmScrobbler(object):
 	enabled = False
 	
 	def __init__(self, username, password, use):
-		password_hash = pylast.md5(password)
 		if use:
+			import pylast
+			password_hash = pylast.md5(password)
 			self.session = pylast.LastFMNetwork(api_key = self.API_KEY, api_secret = self.API_SECRET, username = username, password_hash = password_hash)
 		self.enabled = use
 	
@@ -283,7 +279,6 @@ class commandLineHandler(object):
 				global last_fm
 				global m_client
 				global m_player
-				print ""
 				last_fm.loveSong(m_player.now_playing_song)
 				m_client.thumbsUp(m_player.now_playing_song)
 				break
@@ -291,7 +286,6 @@ class commandLineHandler(object):
 				global last_fm
 				global m_client
 				global m_player
-				print ""
 				last_fm.loveSong(m_player.now_playing_song)
 				m_client.thumbsUp(m_player.now_playing_song)
 				break
@@ -311,7 +305,6 @@ class commandLineHandler(object):
 			if case("NOW"):
 				global m_player
 				song = m_player.now_playing_song
-				print ""
 				if not song is None:
 					track = m_player.now_playing_song["title"]
 					artist = m_player.now_playing_song["artist"]
@@ -321,14 +314,13 @@ class commandLineHandler(object):
 				break
 			if case("EXIT"):
 				global run
-				print ""
 				print "じゃね"
 				run = False
 				break
 			if case():
-				print ""
 				print "Argument error!"
-	
+		print ""
+
 	def queueHandler(self, args):
 		global m_player
 		global m_client
@@ -359,7 +351,6 @@ class commandLineHandler(object):
 		global m_player
 		for case in switch(function):
 			if case(self.QF_LIST):
-				print ""
 				queue = m_player.queue
 				print "Tracks in queue (page {0}/{1})".format(page_no, ((len(queue) / self.SINGLE_PG_LEN) + 1))
 				lower_bound = (page_no - 1) * self.SINGLE_PG_LEN
@@ -371,7 +362,6 @@ class commandLineHandler(object):
 						pass
 				break
 			if case(self.QF_ADDPLI):
-				print ""
 				try:
 					playlist = m_client.playlists[args[2]]
 					for song in playlist:
@@ -381,7 +371,6 @@ class commandLineHandler(object):
 					print "Cannot find playlist."
 				break
 			if case(self.QF_ADDART):
-				print ""
 				try:
 					artist = m_client.library[args[1]]
 					count = 0
@@ -394,7 +383,6 @@ class commandLineHandler(object):
 					print "Cannot find artist."
 				break
 			if case(self.QF_ADDALB):
-				print ""
 				try:
 					album = m_client.library[args[1]][args[2]]
 					count = 0
@@ -406,7 +394,6 @@ class commandLineHandler(object):
 					print "Cannot find artist or album."
 				break
 			if case(self.QF_ADDTRA):
-				print ""
 				try:
 					album = m_client.library[args[1]][args[2]]
 					found = False
@@ -423,7 +410,6 @@ class commandLineHandler(object):
 					print "Cannot find artist, album or track."
 				break
 			if case():
-				print ""
 				print "Argument error."
 	
 	def listHandler(self, args):
@@ -456,7 +442,6 @@ class commandLineHandler(object):
 		lower_bound = (page_no - 1) * self.SINGLE_PG_LEN
 		upper_bound = page_no * self.SINGLE_PG_LEN
 		display_content = None
-		print ""
 		fault = False
 		for case in switch(content_mode):
 			if case(self.CON_PLISTS):
@@ -506,7 +491,6 @@ class commandLineHandler(object):
 	def pmHandler(self, args):
 		global m_player
 		play_mode = 0
-		print ""
 		if len(args) > 1:
 			try:
 				if args[1].upper() == "RANDOM":
@@ -537,24 +521,20 @@ def main():
 	global clh
 	title_string = "\x1b]2;Google Play Music\x07"
 	sys.stdout.write(title_string)
-	print "Logging in to Google Play Music...",
+	print "Logging in to Google Play Music..."
 	m_client = gMusicClient("GOOGLE_USER", "GOOGLE_PASS")
-	print "done."
-	print "Logging in to Last.fm...",
-	last_fm = lastfmScrobbler("LAST_FM_USER", "LAST_FM_PASS", False) ##Set to True if using Last.fm
-	print "done."
-	print "Creating GStreamer player...",
+	print "Logging in to Last.fm..."
+	last_fm = lastfmScrobbler("LASTFM_USER", "LASTFM_PASS", False)
+	print "Creating GStreamer player..."
 	m_player = mediaPlayer()
-	print "done."
-	print "Updating local library from Google Play Music...",
+	print "Updating local library from Google Play Music..."
 	m_client.updateLocalLib()
-	print "done."
 	clh = commandLineHandler()
+	print "Ready!"
 	print ""
-	print "Ready!"	
 	global run
 	while run:
-		clh.parseCL(raw_input())
+		clh.parseCL(raw_input(">"))
 	thread.exit()
 
 gobject.threads_init()
