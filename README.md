@@ -5,7 +5,9 @@ A command line client for Google Play Music.
 
 This script requires Simon Weber's [Google Play Music API](https://github.com/simon-weber/Unofficial-Google-Music-API)
 
-Beofre use ensure to set up your username and password for Google Play and Last.fm in the script.
+Beofre use ensure to set up your username and password for Google Play and Last.fm are setup in the script, alternatively you can pass empty strings for the password fields to use ```getpass()``` to retrieve passwords from the user on startup.
+
+It is possible to disable Last.fm integration by leaving the boolean on the Last.fm login call as ```False```, note that this must be changed to ```True``` in order to use Last.fm features.
 
 From a terminal "cd" to the script and execute it like any other Python script with "python PlayMusicCL.py", you then have access to the following commands:
 

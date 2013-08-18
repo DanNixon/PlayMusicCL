@@ -4,12 +4,13 @@
 ## Command line client for Google Play Music
 ## Copyright: Dan Nixon 2012-13
 ## dan-nixon.com
-## Version: 0.3.3
+## Version: 0.3.4
 ## Date: 18/08/2013
 
 import thread, time, shlex, random, sys
 from gmusicapi import Webclient
 from operator import itemgetter
+from getpass import getpass
 import gobject, glib, pygst
 import gst
 
@@ -46,6 +47,8 @@ class gMusicClient(object):
 		self.api = Webclient()
 		logged_in = False
 		attempts = 0
+		if len(password) is 0:
+			password = getpass("Google password:")
 		while not self.logged_in and attempts < 3:
 			self.logged_in = self.api.login(email, password)
 			attempts += 1
@@ -196,6 +199,8 @@ class lastfmScrobbler(object):
 	
 	def __init__(self, username, password, use):
 		if use:
+			if len(password) is 0:
+				password = getpass("Last.fm password:")
 			import pylast
 			password_hash = pylast.md5(password)
 			self.session = pylast.LastFMNetwork(api_key = self.API_KEY, api_secret = self.API_SECRET, username = username, password_hash = password_hash)
@@ -522,9 +527,9 @@ def main():
 	title_string = "\x1b]2;Google Play Music\x07"
 	sys.stdout.write(title_string)
 	print "Logging in to Google Play Music..."
-	m_client = gMusicClient("GOOGLE_USER", "GOOGLE_PASS")
+	m_client = gMusicClient("GOOGLE_USER", "GOOGLE_PASS") #See README
 	print "Logging in to Last.fm..."
-	last_fm = lastfmScrobbler("LASTFM_USER", "LASTFM_PASS", False)
+	last_fm = lastfmScrobbler("LASTFM_USER", "LASTFM_PASS", False) #See README
 	print "Creating GStreamer player..."
 	m_player = mediaPlayer()
 	print "Updating local library from Google Play Music..."
