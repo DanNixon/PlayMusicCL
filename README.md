@@ -17,7 +17,7 @@ From a terminal "cd" to the script and execute it like any other Python script w
 -	LOVE - Save as LIKE
 -	EXIT - Exits.
 -	NOW - Shows the title and artist of the currently playing song.
-- [empty] (i.e. just pressing return) - Same as NOW
+- [return] - Same as NOW
 -	NEXT (n) - Plays the nth song after the current song (n has no effect in random play mode, n can also be negative to skip back through tracks).
 -	PMODE [random/linear] [repeat/no repeat] - Specifies play options, if you have used any other media player they should be self explanatory.
 -	LIST (pn) - Shows a list of all artists.
