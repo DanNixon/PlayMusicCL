@@ -53,7 +53,7 @@ To see all albums by Eluvietie: ```list Eluveitie```
 
 To see all tracks in Spirit by Eluveitie: ```list Eluveitie Spirit```
 
-To add "...Of Fire, Wind and Wisdom" (in album Spirit) by Eluveitie to the queue: ```queue Eluvietie Spirit "...Of Fire, Wind and Wisdom"```
+To add "...Of Fire, Wind and Wisdom" (in album Spirit) by Eluveitie to the queue: ```queue Eluveitie Spirit "...Of Fire, Wind and Wisdom"```
 
 To see all playlists: ```list plist```
 
