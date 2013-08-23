@@ -5,7 +5,7 @@
 ## Copyright: Dan Nixon 2012-13
 ## dan-nixon.com
 ## Version: 0.3.5
-## Date: 18/08/2013
+## Date: 23/08/2013
 
 import thread, time, shlex, random, sys
 from gmusicapi import Webclient
@@ -28,7 +28,7 @@ class switch(object):
 	def __iter__(self):
 		yield self.match
 		raise StopIteration
-    
+
 	def match(self, *args):
 		if self.fall or not args:
 			return True
@@ -43,7 +43,7 @@ class gMusicClient(object):
 	api = None
 	playlists = dict()
 	library = dict()
-	
+
 	def __init__(self, email, password):
 		self.api = Webclient()
 		logged_in = False
@@ -87,7 +87,7 @@ class gMusicClient(object):
 	def getSongStream(self, song):
 		url = self.api.get_stream_urls(song["id"])[0]
 		return url
-	
+
 	def thumbsUp(self, song):
 		try:
 			song["rating"] = 5
@@ -103,14 +103,19 @@ class mediaPlayer(object):
 	queue = list()
 	queue_index = -1
 	play_mode = 0
-	
+
 	def __init__(self):
 		thread.start_new_thread(self.playerThread, ())
-	
+
 	def __del__(self):
 		self.now_playing_song = None
 		self.player.set_state(gst.STATE_NULL)
-	
+
+	def clear_queue(self):
+		self.stopPlayback()
+		self.queue = list()
+		self.queue_index = -1
+
 	def print_current_song(self):
 		song = self.now_playing_song
 		if not song is None:
@@ -126,7 +131,7 @@ class mediaPlayer(object):
 			return
 		title_string = "\x1b]2;{0} - {1}\x07".format(self.now_playing_song["title"].encode("utf-8"), self.now_playing_song["artist"].encode("utf-8"))
 		thread.start_new_thread(cl_print, (title_string, 1))
-	
+
 	def playerThread(self):
 		if self.player == None:
 			self.player = gst.element_factory_make("playbin2", "player")
@@ -135,7 +140,7 @@ class mediaPlayer(object):
 			bus.add_signal_watch()
 			bus.connect("message", self.songEndHandle)
 			glib.MainLoop().run()
-	
+
 	def playSong(self, song):
 		global m_client
 		global lcd_man
@@ -209,7 +214,7 @@ class lastfmScrobbler(object):
 	API_SECRET = "5007f138c5fef4278f36c70d760f24b7"
 	session = None
 	enabled = False
-	
+
 	def __init__(self, username, password, use):
 		if use:
 			if len(password) is 0:
@@ -218,22 +223,22 @@ class lastfmScrobbler(object):
 			password_hash = pylast.md5(password)
 			self.session = pylast.LastFMNetwork(api_key = self.API_KEY, api_secret = self.API_SECRET, username = username, password_hash = password_hash)
 		self.enabled = use
-	
+
 	def loveSong(self, song):
 		if not song == None and self.enabled:
 			print "Loving {0} by {1} on Last.fm.".format(song["title"].encode("utf-8"), song["artist"].encode("utf-8"))
 			thread.start_new_thread(self.workerFunction, (1, song))
 		else:
 			print "No song playing or Last.fm disabled."
-	
+
 	def updateNowPlaying(self, song):
 		if not song == None and self.enabled:
 			thread.start_new_thread(self.workerFunction, (2, song))
-		
+
 	def scrobbleSong(self, song):
 		if not song == None and self.enabled:
 			thread.start_new_thread(self.workerFunction, (3, song))
-	
+
 	def workerFunction(self, function, song):
 		title = song['title']
 		artist = song['artist']
@@ -257,19 +262,19 @@ class commandLineHandler(object):
 	CON_ARTISTS = 3
 	CON_ALBUMS = 4
 	CON_TRACKS = 5
-	
+
 	QF_LIST = 1
 	QF_ADDPLI = 2
 	QF_ADDART = 3
 	QF_ADDALB = 4
 	QF_ADDTRA = 5
-	
+
 	SINGLE_PG_LEN = 20
-	
+
 	def __del__(self):
 		title_string = "\x1b]2;I played music once, but then I took a SIGTERM to the thread.\x07"
 		sys.stdout.write(title_string)
-	
+
 	def parseCL(self, in_string):
 		if len(in_string) is 0:
 			global m_player
@@ -300,6 +305,10 @@ class commandLineHandler(object):
 				global m_player
 				m_player.togglePlayback()
 				break
+			if case("P"):
+				self.parseCL("PLAY")
+				return
+				break
 			if case("LIKE"):
 				global last_fm
 				global m_client
@@ -309,6 +318,10 @@ class commandLineHandler(object):
 				print ""
 				break
 			if case("LOVE"):
+				self.parseCL("LIKE")
+				return
+				break
+			if case("L"):
 				self.parseCL("LIKE")
 				return
 				break
@@ -326,10 +339,31 @@ class commandLineHandler(object):
 					n = 1
 				m_player.nextSong(n)
 				break
+			if case("N"):
+				self.parseCL("NEXT")
+				return
+				break
 			if case("NOW"):
 				global m_player
 				m_player.print_current_song()
 				print ""
+				break
+			if case("CLEARQUEUE"):
+				global m_player
+				m_player.clear_queue()
+				print "Queue cleared"
+				m_player.set_terminal_title()
+				print ""
+				break
+			if case("PAM"):
+				global m_player
+				global m_client
+				print "Playing awesome music"
+				m_player.clear_queue()
+				for song in m_client.playlists["Thumbs Up"]:
+					m_player.addToQueue(song)
+				m_player.play_mode = 3
+				m_player.playNextInQueue(1)
 				break
 			if case("EXIT"):
 				global run
@@ -430,7 +464,7 @@ class commandLineHandler(object):
 				break
 			if case():
 				print "Argument error."
-	
+
 	def listHandler(self, args):
 		global m_client
 		content_mode = 0
@@ -506,7 +540,7 @@ class commandLineHandler(object):
 						print item.encode("utf-8")
 				except IndexError:
 					pass
-	
+
 	def pmHandler(self, args):
 		global m_player
 		play_mode = 0
