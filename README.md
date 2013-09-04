@@ -15,7 +15,9 @@ It is possible to disable Last.fm integration by leaving the boolean on the Last
 Usage
 -----
 
-From a terminal "cd" to the script and execute it like any other Python script with "python PlayMusicCL.py", you then have access to the following commands:
+From a terminal ```cd``` to the script and execute it like any other Python script with ```python PlayMusicCL.py```, you may also wish to create a new bash alias, allowing you to start the app with a simpler command, this can be done by adding the line ```alias gpm='python ~/apps/PlayMusicCL.py'``` to ```.bashrc``` in your home directory, this will allow you so start the script using the command ```gpm```.
+
+Once the app is running you will then have access to the following commands:
 
 -	```PLAY``` - Pauses or unpauses playback
 -	```PAUSE``` - Same as ```PLAY```
