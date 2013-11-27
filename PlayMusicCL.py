@@ -13,6 +13,7 @@ from operator import itemgetter
 from getpass import getpass
 import gobject, glib, pygst
 import gst
+import os
 
 m_client = None
 m_player = None
@@ -89,12 +90,12 @@ class gMusicClient(object):
 		if len(urls) > 1:
 			print "Retrieving audio for %s" % (song["title"])
 			audio = self.api.get_stream_audio(song["id"])
-			with open("/tmp/audio.mp3",'wb') as output:
+			cwd = os.getcwd();
+			with open(cwd+"/aa_buffer.mp3",'wb') as output:
 				output.write(audio)
-			return "file:///tmp/audio.mp3"
+			return "file:///"+cwd+"/aa_buffer.mp3"
 		else:
 			return urls[0]
-		return "file:///tmp/audio.mp3"
 
 	def thumbsUp(self, song):
 		try:
