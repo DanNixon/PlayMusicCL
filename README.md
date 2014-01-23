@@ -15,7 +15,7 @@ It is possible to disable Last.fm integration by leaving the boolean on the Last
 Usage
 -----
 
-From a terminal ```cd``` to the script and execute it like any other Python script with ```python PlayMusicCL.py```, you may also wish to create a new bash alias, allowing you to start the app with a simpler command, this can be done by adding the line ```alias gpm='python ~/apps/PlayMusicCL.py'``` to ```.bashrc``` in your home directory, this will allow you so start the script using the command ```gpm```.
+From a terminal ```cd``` to the script and execute it like any other Python script with ```python PlayMusicCL.py```, you may also wish to create a new bash alias, allowing you to start the app with a simpler command, this can be done by adding the line ```alias gpm='python ~/apps/PlayMusicCL.py'``` to ```.bashrc``` in your home directory (or equivalent process for the shell you are using), this will allow you so start the script using the command ```gpm```.
 
 Once the app is running you will then have access to the following commands:
 
@@ -30,7 +30,7 @@ Once the app is running you will then have access to the following commands:
 - ```[return]``` - Same as ```NOW```
 -	```NEXT (n)``` - Plays the nth song after the current song (n has no effect in random play mode, n can also be negative to skip back through tracks)
 - ```N``` - Plays next track
--	```PMODE``` [random/linear] [repeat/no repeat] - Specifies play options, if you have used any other media player they should be self explanatory
+-	```PMODE [random/linear] [repeat/no repeat]``` - Specifies play options, if you have used any other media player they should be self explanatory
 -	```LIST (pn)``` - Shows a list of all artists
 -	```LIST (pn) PLIST``` - Shows a lit of all user playlists
 -	```LIST (pn) PLIST [playlist]``` - Shows all songs in specified user playlist
