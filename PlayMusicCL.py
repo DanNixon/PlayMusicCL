@@ -2,24 +2,22 @@
 # -*- coding: utf_8 -*-
 
 ## Command line client for Google Play Music
-## Copyright: Dan Nixon 2012-13
+## Copyright: Dan Nixon 2012-14
 ## dan-nixon.com
-## Version: 0.3.5
-## Date: 23/08/2013
+## Version: 0.4.0
+## Date: 04/03/2014
 
 import thread, time, shlex, random, sys
-from gmusicapi import Webclient
-from operator import itemgetter
+from gmusicapi import Mobileclient
 from getpass import getpass
-import gobject, glib, pygst
+import gobject, glib
 import gst
-import os
 
-m_client = None
-m_player = None
-last_fm = None
-clh = None
-run = True
+__MusicClient__ = None
+__MediaPlayer__ = None
+__LastFm__ = None
+__CLH__ = None
+Run = True
 
 class switch(object):
 	def __init__(self, value):
@@ -39,259 +37,277 @@ class switch(object):
 		else:
 			return False
 
-class gMusicClient(object):
-	logged_in = False
-	api = None
-	playlists = dict()
-	library = dict()
+class GPMClient(object):
+	def __init__(self, email, password, device_id):
+		self.__api = Mobileclient()
+		self.logged_in = False
+		self.__device_id = device_id
 
-	def __init__(self, email, password):
-		self.api = Webclient()
-		logged_in = False
 		attempts = 0
 		if len(password) is 0:
 			password = getpass("Google password:")
 		while not self.logged_in and attempts < 3:
-			self.logged_in = self.api.login(email, password)
+			self.logged_in = self.__api.login(email, password)
 			attempts += 1
 
-	def __del__(self):
-		self.api.logout()
-
-	def updateLocalLib(self):
-		songs = list()
-		self.library = dict()
+		self.all_tracks = dict()
 		self.playlists = dict()
-		songs = self.api.get_all_songs()
+		self.library = dict()
+
+	def __del__(self):
+		self.__api.logout()
+
+	def update_local_lib(self):
+		songs = self.__api.get_all_songs()
+		self.playlists["Thumbs Up"] = list()
+
+		#	Get main library
+		song_map = dict()	
 		for song in songs:
-			song_title = song["title"]
-			if song["artist"] == "":
+			if "rating" in song and song["rating"] == "5":
+				self.playlists["Thumbs Up"].append(song)
+
+			song_id = song["id"]
+			song_artist = song["artist"]
+			song_album = song["album"]
+
+			song_map[song_id] = song
+
+			if song_artist == "":
 				song_artist = "Unknown Artist"
-			else:
-				song_artist = song["artist"]
-			if song["album"] == "":
+
+			if song_album == "":
 				song_album = "Unknown Album"
-			else:
-				song_album = song["album"]
+
 			if not (song_artist in self.library):
-				albums_dict = dict()
-				self.library[song_artist] = albums_dict
+				self.library[song_artist] = dict()
+
 			if not (song_album in self.library[song_artist]):
-				song_list = list()
-				self.library[song_artist][song_album] = song_list
+				self.library[song_artist][song_album] = list()
+
 			self.library[song_artist][song_album].append(song)
-		plists = self.api.get_all_playlist_ids(auto=True, user=True)
-		for u_playlist, u_playlist_id in plists["user"].iteritems():
-			self.playlists[u_playlist] = self.api.get_playlist_songs(u_playlist_id[0])
-		self.playlists["Thumbs Up"] = [song for song in songs if song['rating'] == 5]
 
-	def getSongStream(self, song):
-		urls = self.api.get_stream_urls(song["id"])
-		if len(urls) > 1:
-			print "Retrieving audio for %s" % (song["title"])
-			audio = self.api.get_stream_audio(song["id"])
-			cwd = os.getcwd();
-			with open(cwd+"/aa_buffer.mp3",'wb') as output:
-				output.write(audio)
-			return "file:///"+cwd+"/aa_buffer.mp3"
-		else:
-			return urls[0]
+		# Sort albums by track number
+		for artist in self.library.keys():
+			for album in self.library[artist].keys():
+				newlist = sorted(self.library[artist][album], key=lambda k: k['trackNumber'])
+				self.library[artist][album] = newlist
 
-	def thumbsUp(self, song):
+		#	Get all playlists
+		plists = self.__api.get_all_user_playlist_contents()
+		for plist in plists:
+			plist_name = plist["name"]
+			self.playlists[plist_name] = list()
+			for track in plist["tracks"]:
+				song = song_map[track["trackId"]]
+				self.playlists[plist_name].append(song)
+
+	def get_stream_url(self, song):
+		return self.__api.get_stream_url(song["id"], self.__device_id)
+
+	def rate_song(self, song, rating):
 		try:
-			song["rating"] = 5
+			song["rating"] = rating
 			song_list = [song]
-			self.api.change_song_metadata(song_list)
+##			self.api.change_song_metadata(song_list)	TODO: Not sure if this will work
 			print "Gave a Thumbs Up to {0} by {1} on Google Play.".format(song["title"].encode("utf-8"), song["artist"].encode("utf-8"))
 		except:
 			print "Error giving a Thumbs Up on Google Play."
 
-class mediaPlayer(object):
-	player = None
-	now_playing_song = None
-	queue = list()
-	queue_index = -1
-	play_mode = 0
-
+class MediaPlayer(object):
 	def __init__(self):
-		thread.start_new_thread(self.playerThread, ())
+		self.__player = None
+
+		self.now_playing_song = None
+		self.queue = list()
+		self.queue_index = -1
+		self.play_mode = 0
+
+		thread.start_new_thread(self.player_thread, ())
 
 	def __del__(self):
 		self.now_playing_song = None
-		self.player.set_state(gst.STATE_NULL)
+		self.__player.set_state(gst.STATE_NULL)
+
+	def player_thread(self):
+		if self.__player == None:
+			self.__player = gst.element_factory_make("playbin2", "player")
+			self.__player.set_state(gst.STATE_NULL)
+			bus = self.__player.get_bus()
+			bus.add_signal_watch()
+			bus.connect("message", self.handle_song_end)
+			glib.MainLoop().run()
+
+	def handle_song_end(self, bus, message):
+		if message.type == gst.MESSAGE_EOS:
+			self.next(1)
 
 	def clear_queue(self):
-		self.stopPlayback()
+		self.stop()
 		self.queue = list()
 		self.queue_index = -1
 
 	def print_current_song(self):
 		song = self.now_playing_song
 		if not song is None:
-			track = m_player.now_playing_song["title"]
-			artist = m_player.now_playing_song["artist"]
-			print "Now playing {0} by {1}".format(track.encode("utf-8"), artist.encode("utf-8"))
+			track = __MediaPlayer__.now_playing_song["title"]
+			artist = __MediaPlayer__.now_playing_song["artist"]
+			print "Now playing {0} by {1}".format(
+					track.encode("utf-8"), artist.encode("utf-8"))
 		else:
 			print "No song playing."
 
 	def set_terminal_title(self):
-		if self.now_playing_song == None or self.player.get_state()[1] == gst.STATE_PAUSED:
+		if self.now_playing_song == None or self.__player.get_state()[1] == gst.STATE_PAUSED:
 			sys.stdout.write("\x1b]2;Google Play Music\x07")
 			return
-		title_string = "\x1b]2;{0} - {1}\x07".format(self.now_playing_song["title"].encode("utf-8"), self.now_playing_song["artist"].encode("utf-8"))
+		title_string = "\x1b]2;{0} - {1}\x07".format(
+				self.now_playing_song["title"].encode("utf-8"),
+				self.now_playing_song["artist"].encode("utf-8"))
 		thread.start_new_thread(cl_print, (title_string, 1))
 
-	def playerThread(self):
-		if self.player == None:
-			self.player = gst.element_factory_make("playbin2", "player")
-			self.player.set_state(gst.STATE_NULL)
-			bus = self.player.get_bus()
-			bus.add_signal_watch()
-			bus.connect("message", self.songEndHandle)
-			glib.MainLoop().run()
 
-	def playSong(self, song):
-		global m_client
-		global lcd_man
-		global last_fm
-		song_url = m_client.getSongStream(song)
+	def play(self, song):
+		song_url = __MusicClient__.get_stream_url(song)
 		try:
-			self.player.set_property("uri", song_url)
-			self.player.set_state(gst.STATE_PLAYING)
+			self.__player.set_property("uri", song_url)
+			self.__player.set_state(gst.STATE_PLAYING)
 			self.now_playing_song = song
 			self.print_current_song()
 			self.set_terminal_title()
-			last_fm.updateNowPlaying(song)
+			__LastFm__.update_now_playing(song)
 		except AttributeError:
 			print "Player error!"
 
-	def togglePlayback(self):
+	def toggle_playback(self):
 		try:
-			player_state = self.player.get_state()[1]
+			player_state = self.__player.get_state()[1]
 			if player_state == gst.STATE_PAUSED:
-				self.player.set_state(gst.STATE_PLAYING)
+				self.__player.set_state(gst.STATE_PLAYING)
 				self.set_terminal_title()
 				print "Resumng playback."
 			elif player_state == gst.STATE_PLAYING:
-				self.player.set_state(gst.STATE_PAUSED)
+				self.__player.set_state(gst.STATE_PAUSED)
 				self.set_terminal_title()
 				print "Pauseing playback."
 				print ""
 			elif player_state == gst.STATE_NULL:
-				self.playNextInQueue(1)
+				self.__play_next_in_queue(1)
 		except AttributeError:
 			print "Player error!"
 
-	def stopPlayback(self):
+	def stop(self):
 		try:
-			self.player.set_state(gst.STATE_NULL)
+			self.__player.set_state(gst.STATE_NULL)
 			self.now_playing_song = None
 		except AttributeError:
 			print "Player error!"
 
-	def songEndHandle(self, bus, message):
-		if message.type == gst.MESSAGE_EOS:
-			self.nextSong(1)
 
-	def playNextInQueue(self, n):
+	def __play_next_in_queue(self, n_offset):
 		if (self.play_mode % 2) == 0:
-			self.queue_index += n
+			self.queue_index += n_offset
 		else:
 			self.queue_index = random.randint(0, (len(self.queue) - 1))
 		if (self.queue_index < len(self.queue)) and (self.queue_index >= 0):
 			next_song = self.queue[self.queue_index]
-			self.playSong(next_song)
+			self.play(next_song)
 		else:
 			if (self.play_mode == 2) or (self.play_mode == 3):
 				self.queue_index = -1
-				self.playNextInQueue(1)
+				self.__play_next_in_queue(1)
 			else:
-				self.stopPlayback()
+				self.stop()
 				self.set_terminal_title()
 
-	def addToQueue(self, song):
+	def add_to_queue(self, song):
 		self.queue.append(song)
 
-	def nextSong(self, n):
-		global last_fm
-		last_fm.scrobbleSong(self.now_playing_song)
-		self.stopPlayback()
-		self.playNextInQueue(n)
+	def next(self, n_offset):
+		__LastFm__.scrobble(self.now_playing_song)
+		self.stop()
+		self.__play_next_in_queue(n_offset)
 
-class lastfmScrobbler(object):
-	API_KEY = "a0790cb91b8799b0eda1f60d3924b676"
-	API_SECRET = "5007f138c5fef4278f36c70d760f24b7"
-	session = None
-	enabled = False
-
+class LastfmScrobbler(object):
 	def __init__(self, username, password, use):
+		self.__api_key = "a0790cb91b8799b0eda1f60d3924b676"
+		self.__api_secret = "5007f138c5fef4278f36c70d760f24b7"
+
+		self.__session = None
+
 		if use:
 			if len(password) is 0:
 				password = getpass("Last.fm password:")
 			import pylast
 			password_hash = pylast.md5(password)
-			self.session = pylast.LastFMNetwork(api_key = self.API_KEY, api_secret = self.API_SECRET, username = username, password_hash = password_hash)
+			self.__session = pylast.LastFMNetwork(
+					api_key = self.__api_key, api_secret = self.__api_secret,
+					username = username, password_hash = password_hash)
 		self.enabled = use
 
-	def loveSong(self, song):
+	def love_song(self, song):
 		if not song == None and self.enabled:
-			print "Loving {0} by {1} on Last.fm.".format(song["title"].encode("utf-8"), song["artist"].encode("utf-8"))
-			thread.start_new_thread(self.workerFunction, (1, song))
+			print "Loving {0} by {1} on Last.fm.".format(
+					song["title"].encode("utf-8"), song["artist"].encode("utf-8"))
+			thread.start_new_thread(self.__love, (song,))
 		else:
 			print "No song playing or Last.fm disabled."
 
-	def updateNowPlaying(self, song):
-		if not song == None and self.enabled:
-			thread.start_new_thread(self.workerFunction, (2, song))
-
-	def scrobbleSong(self, song):
-		if not song == None and self.enabled:
-			thread.start_new_thread(self.workerFunction, (3, song))
-
-	def workerFunction(self, function, song):
+	def __love(self, song):
 		title = song['title']
 		artist = song['artist']
 		if artist == "":
 			artist = "Unknown Artist"
-		for case in switch(function):
-			if case(1):
-				track = self.session.get_track(artist, title)
-				track.love()
-				break
-			if case(2):
-				self.session.update_now_playing(artist, title)
-				break
-			if case(3):
-				self.session.scrobble(artist, title, int(time.time()))
-				break
+		track = self.__session.get_track(artist, title)
+		track.love()
 
-class commandLineHandler(object):
-	CON_PLISTS = 1
-	CON_PLTRACKS = 2
-	CON_ARTISTS = 3
-	CON_ALBUMS = 4
-	CON_TRACKS = 5
+	def update_now_playing(self, song):
+		if not song == None and self.enabled:
+			thread.start_new_thread(self.__now_playing, (song,))
 
-	QF_LIST = 1
-	QF_ADDPLI = 2
-	QF_ADDART = 3
-	QF_ADDALB = 4
-	QF_ADDTRA = 5
+	def __now_playing(self, song):
+		title = song['title']
+		artist = song['artist']
+		if artist == "":
+			artist = "Unknown Artist"
+		self.__session.update_now_playing(artist, title)
 
-	SINGLE_PG_LEN = 20
+	def scrobble(self, song):
+		if not song == None and self.enabled:
+			thread.start_new_thread(self.__scrobble, (song,))
+
+	def __scrobble(self, song):
+		title = song['title']
+		artist = song['artist']
+		if artist == "":
+			artist = "Unknown Artist"
+		self.__session.scrobble(artist, title, int(time.time()))
+
+class CommandLineHandler(object):
+	__CON_PLISTS = 1
+	__CON_PLTRACKS = 2
+	__CON_ARTISTS = 3
+	__CON_ALBUMS = 4
+	__CON_TRACKS = 5
+
+	__QF_LIST = 1
+	__QF_ADDPLI = 2
+	__QF_ADDART = 3
+	__QF_ADDALB = 4
+	__QF_ADDTRA = 5
+
+	__SINGLE_PG_LEN = 20
 
 	def __del__(self):
 		title_string = "\x1b]2;I played music once, but then I took a SIGTERM to the thread.\x07"
 		sys.stdout.write(title_string)
 
-	def parseCL(self, in_string):
+	def parse_cl(self, in_string):
 		if len(in_string) is 0:
-			global m_player
-			m_player.print_current_song()
+			__MediaPlayer__.print_current_song()
 			print ""
 			return
 		function = None
-		f_args = None
 		try:
 			args = shlex.split(in_string)
 			function = args[0].upper()
@@ -299,7 +315,7 @@ class commandLineHandler(object):
 			pass
 		for case in switch(function):
 			if case("LIST"):
-				self.listHandler(args)
+				self.list_handler(args)
 				print ""
 				break
 			if case("QUEUE"):
@@ -307,161 +323,143 @@ class commandLineHandler(object):
 				print ""
 				break
 			if case("PAUSE"):
-				global m_player
-				m_player.togglePlayback()
+				__MediaPlayer__.toggle_playback()
 				break
 			if case("PLAY"):
-				global m_player
-				m_player.togglePlayback()
+				__MediaPlayer__.toggle_playback()
 				break
 			if case("P"):
-				self.parseCL("PLAY")
+				self.parse_cl("PLAY")
 				return
-				break
 			if case("LIKE"):
-				global last_fm
-				global m_client
-				global m_player
-				last_fm.loveSong(m_player.now_playing_song)
-				m_client.thumbsUp(m_player.now_playing_song)
+				__LastFm__.love_song(__MediaPlayer__.now_playing_song)
+				__MusicClient__.rate_song(__MediaPlayer__.now_playing_song, 5)
 				print ""
 				break
 			if case("LOVE"):
-				self.parseCL("LIKE")
+				self.parse_cl("LIKE")
 				return
-				break
 			if case("L"):
-				self.parseCL("LIKE")
+				self.parse_cl("LIKE")
 				return
-				break
 			if case("PMODE"):
-				self.pmHandler(args)
+				self.pm_handler(args)
 				print ""
 				break
 			if case("NEXT"):
-				global m_player
 				try:
-					n = int(args[1])
+					n_offset = int(args[1])
 				except ValueError:
-					n = 1
+					n_offset = 1
 				except IndexError:
-					n = 1
-				m_player.nextSong(n)
+					n_offset = 1
+				__MediaPlayer__.next(n_offset)
 				break
 			if case("N"):
-				self.parseCL("NEXT")
+				self.parse_cl("NEXT")
 				return
-				break
 			if case("NOW"):
-				global m_player
-				m_player.print_current_song()
+				__MediaPlayer__.print_current_song()
 				print ""
 				break
 			if case("CLEARQUEUE"):
-				global m_player
-				m_player.clear_queue()
+				__MediaPlayer__.clear_queue()
 				print "Queue cleared"
-				m_player.set_terminal_title()
+				__MediaPlayer__.set_terminal_title()
 				print ""
 				break
 			if case("PAM"):
-				global m_player
-				global m_client
 				print "Playing awesome music"
-				m_player.clear_queue()
-				for song in m_client.playlists["Thumbs Up"]:
-					m_player.addToQueue(song)
-				m_player.play_mode = 3
-				m_player.playNextInQueue(1)
+				__MediaPlayer__.clear_queue()
+				for song in __MusicClient__.playlists["Thumbs Up"]:
+					__MediaPlayer__.add_to_queue(song)
+				__MediaPlayer__.play_mode = 3
+				__MediaPlayer__.next(1)
 				break
 			if case("EXIT"):
-				global run
 				print "じゃね"
-				run = False
+				global Run
+				Run = False
 				break
 			if case():
 				print "Argument error!"
 				print ""
 
 	def queueHandler(self, args):
-		global m_player
-		global m_client
 		function = 0
 		page_no = 0
 		for case in switch(len(args)):
 			if case(1):
-				function = self.QF_LIST
+				function = self.__QF_LIST
 				page_no = 1
 				break
 			if case(2):
 				try:
 					page_no = int(args[1])
-					function = self.QF_LIST
+					function = self.__QF_LIST
 				except ValueError:
-					function = self.QF_ADDART
+					function = self.__QF_ADDART
 				break
 			if case(3):
 				if args[1].upper() == "PLIST":
-					function = self.QF_ADDPLI
+					function = self.__QF_ADDPLI
 				else:
-					function = self.QF_ADDALB
+					function = self.__QF_ADDALB
 				break
 			if case(4):
-				function = self.QF_ADDTRA
+				function = self.__QF_ADDTRA
 				break
-		global m_client
-		global m_player
 		for case in switch(function):
-			if case(self.QF_LIST):
-				queue = m_player.queue
-				print "Tracks in queue (page {0}/{1})".format(page_no, ((len(queue) / self.SINGLE_PG_LEN) + 1))
-				lower_bound = (page_no - 1) * self.SINGLE_PG_LEN
-				upper_bound = page_no * self.SINGLE_PG_LEN
+			if case(self.__QF_LIST):
+				queue = __MediaPlayer__.queue
+				print "Tracks in queue (page {0}/{1})".format(page_no, ((len(queue) / self.__SINGLE_PG_LEN) + 1))
+				lower_bound = (page_no - 1) * self.__SINGLE_PG_LEN
+				upper_bound = page_no * self.__SINGLE_PG_LEN
 				for i in range(lower_bound, upper_bound):
 					try:
 						print "{0} - {1}".format(queue[i]["artist"].encode("utf-8"), queue[i]["title"].encode("utf-8"))
 					except IndexError:
 						pass
 				break
-			if case(self.QF_ADDPLI):
+			if case(self.__QF_ADDPLI):
 				try:
-					playlist = m_client.playlists[args[2]]
+					playlist = __MusicClient__.playlists[args[2]]
 					for song in playlist:
-						m_player.addToQueue(song)
+						__MediaPlayer__.add_to_queue(song)
 					print "Added {0} tracks from {1} to queue".format(len(playlist), args[2])
 				except KeyError:
 					print "Cannot find playlist."
 				break
-			if case(self.QF_ADDART):
+			if case(self.__QF_ADDART):
 				try:
-					artist = m_client.library[args[1]]
+					artist = __MusicClient__.library[args[1]]
 					count = 0
 					for album in artist:
 						for song in artist[album]:
-							m_player.addToQueue(song)
+							__MediaPlayer__.add_to_queue(song)
 							count += 1
 					print "Added {0} tracks by {1} to queue".format(count, args[1])
 				except KeyError:
 					print "Cannot find artist."
 				break
-			if case(self.QF_ADDALB):
+			if case(self.__QF_ADDALB):
 				try:
-					album = m_client.library[args[1]][args[2]]
+					album = __MusicClient__.library[args[1]][args[2]]
 					count = 0
 					for song in album:
-						m_player.addToQueue(song)
+						__MediaPlayer__.add_to_queue(song)
 						count += 1
 					print "Added {0} tracks from {1} by {2} to queue".format(count, args[2], args[1])
 				except KeyError:
 					print "Cannot find artist or album."
 				break
-			if case(self.QF_ADDTRA):
+			if case(self.__QF_ADDTRA):
 				try:
-					album = m_client.library[args[1]][args[2]]
+					album = __MusicClient__.library[args[1]][args[2]]
 					found = False
 					for song in album:
 						if song["title"] == args[3]:
-							m_player.addToQueue(song)
+							__MediaPlayer__.add_to_queue(song)
 							found = True
 							break
 					if found:
@@ -474,8 +472,7 @@ class commandLineHandler(object):
 			if case():
 				print "Argument error."
 
-	def listHandler(self, args):
-		global m_client
+	def list_handler(self, args):
 		content_mode = 0
 		offset = 0
 		try:
@@ -489,57 +486,56 @@ class commandLineHandler(object):
 			if args[2 + offset].upper() == "PLIST":
 				try:
 					playlist = args[3 + offset]
-					content_mode = self.CON_PLTRACKS
+					content_mode = self.__CON_PLTRACKS
 				except IndexError:
-					content_mode = self.CON_PLISTS
+					content_mode = self.__CON_PLISTS
 			else:
 				artist = args[2 + offset]
 				try:
 					album = args[3 + offset]
-					content_mode = self.CON_TRACKS
+					content_mode = self.__CON_TRACKS
 				except IndexError:
-					content_mode = self.CON_ALBUMS
+					content_mode = self.__CON_ALBUMS
 		except IndexError:
-			content_mode = self.CON_ARTISTS
-		lower_bound = (page_no - 1) * self.SINGLE_PG_LEN
-		upper_bound = page_no * self.SINGLE_PG_LEN
+			content_mode = self.__CON_ARTISTS
+		lower_bound = (page_no - 1) * self.__SINGLE_PG_LEN
+		upper_bound = page_no * self.__SINGLE_PG_LEN
 		display_content = None
 		fault = False
 		for case in switch(content_mode):
-			if case(self.CON_PLISTS):
-				display_content = m_client.playlists.keys()
-				print "All Playlists (page {0}/{1}):".format(page_no, ((len(display_content) / self.SINGLE_PG_LEN) + 1))
+			if case(self.__CON_PLISTS):
+				display_content = __MusicClient__.playlists.keys()
+				print "All Playlists (page {0}/{1}):".format(page_no, ((len(display_content) / self.__SINGLE_PG_LEN) + 1))
 				break
-			if case(self.CON_PLTRACKS):
+			if case(self.__CON_PLTRACKS):
 				try:
-					display_content = m_client.playlists[playlist]
-					print "Tracks in {0} playlist (page {1}/{2}):".format(playlist, page_no, ((len(display_content) / self.SINGLE_PG_LEN) + 1))
+					display_content = __MusicClient__.playlists[playlist]
+					print "Tracks in {0} playlist (page {1}/{2}):".format(playlist, page_no, ((len(display_content) / self.__SINGLE_PG_LEN) + 1))
 				except:
 					print "Cannot find artist or album."
 					fault = True
 				break
-			if case(self.CON_ARTISTS):
-				display_content = m_client.library.keys()
-				print "All Artists (page {0}/{1}):".format(page_no, ((len(display_content) / self.SINGLE_PG_LEN) + 1))
+			if case(self.__CON_ARTISTS):
+				display_content = __MusicClient__.library.keys()
+				print "All Artists (page {0}/{1}):".format(page_no, ((len(display_content) / self.__SINGLE_PG_LEN) + 1))
 				break
-			if case(self.CON_ALBUMS):
+			if case(self.__CON_ALBUMS):
 				try:
-					display_content = m_client.library[artist].keys()
-					print "All albums by {0} (page {1}/{2}):".format(artist, page_no, ((len(display_content) / self.SINGLE_PG_LEN) + 1))
+					display_content = __MusicClient__.library[artist].keys()
+					print "All albums by {0} (page {1}/{2}):".format(artist, page_no, ((len(display_content) / self.__SINGLE_PG_LEN) + 1))
 				except KeyError:
 					print "Cannot find artist or album."
 					fault = True
 				break
-			if case(self.CON_TRACKS):
+			if case(self.__CON_TRACKS):
 				try:
-					display_content = m_client.library[artist][album]
-					print "All tracks in {0} by {1} (page {2}/{3}):".format(album, artist, page_no, ((len(display_content) / self.SINGLE_PG_LEN) + 1))
+					display_content = __MusicClient__.library[artist][album]
+					print "All tracks in {0} by {1} (page {2}/{3}):".format(album, artist, page_no, ((len(display_content) / self.__SINGLE_PG_LEN) + 1))
 				except KeyError:
 					print "Cannot find artist or album."
 					fault = True
 				break
 		if not fault:
-			display_content.sort()
 			for i in range(lower_bound, upper_bound):
 				try:
 					item = display_content[i]
@@ -550,8 +546,7 @@ class commandLineHandler(object):
 				except IndexError:
 					pass
 
-	def pmHandler(self, args):
-		global m_player
+	def pm_handler(self, args):
 		play_mode = 0
 		if len(args) > 1:
 			try:
@@ -559,10 +554,10 @@ class commandLineHandler(object):
 					play_mode += 1
 				if args[2].upper() == "REPEAT":
 					play_mode += 2
-				m_player.play_mode = play_mode
+				__MediaPlayer__.play_mode = play_mode
 			except IndexError:
 				print "Argument error!"
-		for case in switch(m_player.play_mode):
+		for case in switch(__MediaPlayer__.play_mode):
 			if case(0):
 				print "Play mode: Linear, No Repeat"
 				break
@@ -580,26 +575,27 @@ def cl_print(console_string, *args):
 	print console_string
 
 def main():
-	global m_player
-	global m_client
-	global last_fm
-	global clh
+	global __MusicClient__
+	global __LastFm__
+	global __MediaPlayer__
+	global __CLH__
+	global Run
 	title_string = "\x1b]2;Google Play Music\x07"
 	sys.stdout.write(title_string)
 	print "Logging in to Google Play Music..."
-	m_client = gMusicClient("GOOGLE_USER", "GOOGLE_PASS")
+	__MusicClient__ = GPMClient("GOOGLE_EMAIL", "GOOGLE_PASSWORD", "DEVICE_ID")
 	print "Logging in to Last.fm..."
-	last_fm = lastfmScrobbler("LASTFM_USER", "LASTFM_PASS", False)
+	__LastFm__ = LastfmScrobbler("LASTFM_USERNAME", "LASTFM_PASSWORD", False)
 	print "Creating GStreamer player..."
-	m_player = mediaPlayer()
+	__MediaPlayer__ = MediaPlayer()
 	print "Updating local library from Google Play Music..."
-	m_client.updateLocalLib()
-	clh = commandLineHandler()
+	__MusicClient__.update_local_lib()
+	__CLH__ = CommandLineHandler()
 	print "Ready!"
 	print ""
-	global run
-	while run:
-		clh.parseCL(raw_input())
+	Run = True
+	while Run:
+		__CLH__.parse_cl(raw_input())
 	thread.exit()
 
 gobject.threads_init()
