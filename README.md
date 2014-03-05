@@ -3,7 +3,7 @@ PlayMusicCL
 
 A command line client for Google Play Music.
 
-This script requires Simon Weber's [Google Play Music API](https://github.com/simon-weber/Unofficial-Google-Music-API) and if Last.fm features are desired, [PyLast](https://code.google.com/p/pylast/).
+This script requires Simon Weber's [Google Play Music API](https://github.com/simon-weber/Unofficial-Google-Music-API) (currently the ```develop``` branch is needed to enable Thumbs Up from ```Mobileclient```) and if Last.fm features are desired, [PyLast](https://code.google.com/p/pylast/).
 
 Configuration
 -------------

@@ -4,7 +4,7 @@
 ## Command line client for Google Play Music
 ## Copyright: Dan Nixon 2012-14
 ## dan-nixon.com
-## Version: 0.4.0
+## Version: 0.4.1
 ## Date: 04/03/2014
 
 import thread, time, shlex, random, sys
@@ -17,7 +17,8 @@ __MusicClient__ = None
 __MediaPlayer__ = None
 __LastFm__ = None
 __CLH__ = None
-Run = True
+
+__Run__ = True
 
 class switch(object):
 	def __init__(self, value):
@@ -109,7 +110,7 @@ class GPMClient(object):
 		try:
 			song["rating"] = rating
 			song_list = [song]
-##			self.api.change_song_metadata(song_list)	TODO: Not sure if this will work
+			self.__api.change_song_metadata(song_list)
 			print "Gave a Thumbs Up to {0} by {1} on Google Play.".format(song["title"].encode("utf-8"), song["artist"].encode("utf-8"))
 		except:
 			print "Error giving a Thumbs Up on Google Play."
@@ -258,8 +259,11 @@ class LastfmScrobbler(object):
 		artist = song['artist']
 		if artist == "":
 			artist = "Unknown Artist"
-		track = self.__session.get_track(artist, title)
-		track.love()
+		try:
+			track = self.__session.get_track(artist, title)
+			track.love()
+		except:
+			print "Error loving song on Last.fm"
 
 	def update_now_playing(self, song):
 		if not song == None and self.enabled:
@@ -270,7 +274,10 @@ class LastfmScrobbler(object):
 		artist = song['artist']
 		if artist == "":
 			artist = "Unknown Artist"
-		self.__session.update_now_playing(artist, title)
+		try:
+			self.__session.update_now_playing(artist, title)
+		except:
+			pass
 
 	def scrobble(self, song):
 		if not song == None and self.enabled:
@@ -281,7 +288,10 @@ class LastfmScrobbler(object):
 		artist = song['artist']
 		if artist == "":
 			artist = "Unknown Artist"
-		self.__session.scrobble(artist, title, int(time.time()))
+		try:
+			self.__session.scrobble(artist, title, int(time.time()))
+		except:
+			pass
 
 class CommandLineHandler(object):
 	__CON_PLISTS = 1
@@ -378,8 +388,8 @@ class CommandLineHandler(object):
 				break
 			if case("EXIT"):
 				print "じゃね"
-				global Run
-				Run = False
+				global __Run__
+				__Run__ = False
 				break
 			if case():
 				print "Argument error!"
@@ -579,13 +589,13 @@ def main():
 	global __LastFm__
 	global __MediaPlayer__
 	global __CLH__
-	global Run
+	global __Run__
 	title_string = "\x1b]2;Google Play Music\x07"
 	sys.stdout.write(title_string)
 	print "Logging in to Google Play Music..."
 	__MusicClient__ = GPMClient("GOOGLE_EMAIL", "GOOGLE_PASSWORD", "DEVICE_ID")
 	print "Logging in to Last.fm..."
-	__LastFm__ = LastfmScrobbler("LASTFM_USERNAME", "LASTFM_PASSWORD", False)
+	__LastFm__ = LastfmScrobbler("LASTFM_USER", "LASTFM_PASSWORD", False)
 	print "Creating GStreamer player..."
 	__MediaPlayer__ = MediaPlayer()
 	print "Updating local library from Google Play Music..."
@@ -593,8 +603,8 @@ def main():
 	__CLH__ = CommandLineHandler()
 	print "Ready!"
 	print ""
-	Run = True
-	while Run:
+	__Run__ = True
+	while __Run__:
 		__CLH__.parse_cl(raw_input())
 	thread.exit()
 
