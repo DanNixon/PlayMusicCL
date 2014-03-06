@@ -39,6 +39,9 @@ class switch(object):
 			return False
 
 class GPMClient(object):
+	all_songs_album_title = "All Songs"
+	thumbs_up_playlist_name = "Thumbs Up"
+
 	def __init__(self, email, password, device_id):
 		self.__api = Mobileclient()
 		self.logged_in = False
@@ -60,13 +63,13 @@ class GPMClient(object):
 
 	def update_local_lib(self):
 		songs = self.__api.get_all_songs()
-		self.playlists["Thumbs Up"] = list()
+		self.playlists[self.thumbs_up_playlist_name] = list()
 
 		#	Get main library
 		song_map = dict()	
 		for song in songs:
 			if "rating" in song and song["rating"] == "5":
-				self.playlists["Thumbs Up"].append(song)
+				self.playlists[self.thumbs_up_playlist_name].append(song)
 
 			song_id = song["id"]
 			song_artist = song["artist"]
@@ -82,17 +85,22 @@ class GPMClient(object):
 
 			if not (song_artist in self.library):
 				self.library[song_artist] = dict()
+				self.library[song_artist][self.all_songs_album_title] = list()
 
 			if not (song_album in self.library[song_artist]):
 				self.library[song_artist][song_album] = list()
 
 			self.library[song_artist][song_album].append(song)
+			self.library[song_artist][self.all_songs_album_title].append(song)
 
 		# Sort albums by track number
 		for artist in self.library.keys():
 			for album in self.library[artist].keys():
-				newlist = sorted(self.library[artist][album], key=lambda k: k['trackNumber'])
-				self.library[artist][album] = newlist
+				if album == self.all_songs_album_title:
+					sorted_album = sorted(self.library[artist][album], key=lambda k: k['title'])
+				else:
+					sorted_album = sorted(self.library[artist][album], key=lambda k: k['trackNumber'])
+				self.library[artist][album] = sorted_album
 
 		#	Get all playlists
 		plists = self.__api.get_all_user_playlist_contents()
@@ -514,7 +522,7 @@ class CommandLineHandler(object):
 		fault = False
 		for case in switch(content_mode):
 			if case(self.__CON_PLISTS):
-				display_content = __MusicClient__.playlists.keys()
+				display_content = sorted(__MusicClient__.playlists.keys())
 				print "All Playlists (page {0}/{1}):".format(page_no, ((len(display_content) / self.__SINGLE_PG_LEN) + 1))
 				break
 			if case(self.__CON_PLTRACKS):
@@ -526,12 +534,12 @@ class CommandLineHandler(object):
 					fault = True
 				break
 			if case(self.__CON_ARTISTS):
-				display_content = __MusicClient__.library.keys()
+				display_content = sorted(__MusicClient__.library.keys())
 				print "All Artists (page {0}/{1}):".format(page_no, ((len(display_content) / self.__SINGLE_PG_LEN) + 1))
 				break
 			if case(self.__CON_ALBUMS):
 				try:
-					display_content = __MusicClient__.library[artist].keys()
+					display_content = sorted(__MusicClient__.library[artist].keys())
 					print "All albums by {0} (page {1}/{2}):".format(artist, page_no, ((len(display_content) / self.__SINGLE_PG_LEN) + 1))
 				except KeyError:
 					print "Cannot find artist or album."
