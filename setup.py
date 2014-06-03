@@ -2,9 +2,9 @@ from setuptools import setup
 
 setup(
 		name='playmusiccl',
-    version='0.5.0',
+    version='0.5.1',
 		entry_points = {
-			'console_scripts': ['playmusiccl=playmusiccl.PlayMusicCL:main'],
+			'console_scripts': ['playmusiccl=playmusiccl.PlayMusicCL:run'],
 	  },
     description='Text based command line client for Google Play Music',
 		classifiers=[

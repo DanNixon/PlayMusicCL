@@ -4,7 +4,7 @@
 ## Command line client for Google Play Music
 ## Copyright: Dan Nixon 2012-14
 ## dan-nixon.com
-## Version: 0.5.0
+## Version: 0.5.1
 ## Date: 03/05/2014
 
 import thread, time, shlex, random, sys, os
@@ -655,6 +655,9 @@ def main():
 		__CLH__.parse_cl(raw_input())
 	thread.exit()
 
-if __name__ == "__main__":
+def run():
 	gobject.threads_init()
 	main()
+
+if __name__ == "__main__":
+	run()
