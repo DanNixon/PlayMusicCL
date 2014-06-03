@@ -4,10 +4,10 @@
 ## Command line client for Google Play Music
 ## Copyright: Dan Nixon 2012-14
 ## dan-nixon.com
-## Version: 0.4.1
-## Date: 04/03/2014
+## Version: 0.5.0
+## Date: 03/05/2014
 
-import thread, time, shlex, random, sys
+import thread, time, shlex, random, sys, os
 from gmusicapi import Mobileclient
 from getpass import getpass
 import gobject, glib
@@ -48,8 +48,6 @@ class GPMClient(object):
 		self.__device_id = device_id
 
 		attempts = 0
-		if len(password) is 0:
-			password = getpass("Google password:")
 		while not self.logged_in and attempts < 3:
 			self.logged_in = self.__api.login(email, password)
 			attempts += 1
@@ -245,8 +243,6 @@ class LastfmScrobbler(object):
 		self.__session = None
 
 		if use:
-			if len(password) is 0:
-				password = getpass("Last.fm password:")
 			import pylast
 			password_hash = pylast.md5(password)
 			self.__session = pylast.LastFMNetwork(
@@ -592,6 +588,41 @@ class CommandLineHandler(object):
 def cl_print(console_string, *args):
 	print console_string
 
+def get_config():
+	config = dict()
+	try:
+		with open(os.path.expanduser("~/.PlayMusicCL")) as conf_file:
+			conf_lines = conf_file.readlines()
+			for line in conf_lines:
+				data = line.split()
+				for case in switch(data[0]):
+					if case("google_user"):
+						config['google_user'] = data[1]
+						break
+					if case("google_pass"):
+						config['google_pass'] = data[1]
+						break
+					if case("google_deviceid"):
+						config['google_deviceid'] = data[1]
+						break
+					if case("lastfm_user"):
+						config['lastfm_user'] = data[1]
+						break
+					if case("lastfm_pass"):
+						config['lastfm_pass'] = data[1]
+						break
+		if "google_pass" not in config:
+			config["google_pass"] = getpass("Google password: ")
+		if "lastfm_pass" not in config and "lastfm_user" in config:
+			config["lastfm_pass"] = getpass("Last.fm password: ")
+		# if ["google_user", "google_pass", "google_deviceid"] not in config:
+			# print "Config file error"
+			# sys.exit(1)
+	except IOError:
+		print "Can't find ~/.PlayMusicCL"
+		sys.exit(1);
+	return config
+
 def main():
 	global __MusicClient__
 	global __LastFm__
@@ -600,15 +631,23 @@ def main():
 	global __Run__
 	title_string = "\x1b]2;Google Play Music\x07"
 	sys.stdout.write(title_string)
+
+	config = get_config()
+
 	print "Logging in to Google Play Music..."
-	__MusicClient__ = GPMClient("GOOGLE_EMAIL", "GOOGLE_PASSWORD", "DEVICE_ID")
-	print "Logging in to Last.fm..."
-	__LastFm__ = LastfmScrobbler("LASTFM_USER", "LASTFM_PASSWORD", False)
+	__MusicClient__ = GPMClient(config.get("google_user"), config.get("google_pass"), config.get("google_deviceid"))
+
+	if("lastfm_user" in config):
+		print "Logging in to Last.fm..."
+	__LastFm__ = LastfmScrobbler(config.get("lastfm_user", ""), config.get("lastfm_pass", ""), ("lastfm__user" in config))
+
 	print "Creating GStreamer player..."
 	__MediaPlayer__ = MediaPlayer()
+
 	print "Updating local library from Google Play Music..."
 	__MusicClient__.update_local_lib()
 	__CLH__ = CommandLineHandler()
+
 	print "Ready!"
 	print ""
 	__Run__ = True
@@ -616,5 +655,6 @@ def main():
 		__CLH__.parse_cl(raw_input())
 	thread.exit()
 
-gobject.threads_init()
-main()
+if __name__ == "__main__":
+	gobject.threads_init()
+	main()

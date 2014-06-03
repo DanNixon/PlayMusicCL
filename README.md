@@ -3,19 +3,21 @@ PlayMusicCL
 
 A command line client for Google Play Music.
 
-This script requires Simon Weber's [Google Play Music API](https://github.com/simon-weber/Unofficial-Google-Music-API) (currently the ```develop``` branch is needed to enable Thumbs Up from ```Mobileclient```) and if Last.fm features are desired, [PyLast](https://code.google.com/p/pylast/).
+This script requires Simon Weber's [Google Play Music API](https://github.com/simon-weber/Unofficial-Google-Music-API) (currently the ```develop``` branch is needed to enable Thumbs Up from ```Mobileclient```) and if Last.fm features are desired, [PyLast](https://code.google.com/p/pylast/) both of which are installed using ```setup.py```.
 
-Configuration
--------------
+Install/Configuration
+---------------------
 
-Before use ensure to set up your username and password for Google Play and Last.fm are setup in the script, alternatively you can pass empty strings for the password fields to use ```getpass()``` to retrieve passwords from the user on startup.
+Install using ```python setup.py install```.
 
-It is possible to disable Last.fm integration by leaving the boolean on the Last.fm login call as ```False```, note that this must be changed to ```True``` in order to use Last.fm features.
+Configuration is done in the ```.PlayMusicCL``` file stored in the home directory (see example), the ```google_user``` and ```google_device_id``` are the minimum required keys for the app to function.   
+Password configs can be omitted and the password requested when the app starts.   
+Omitting the ```lastfm_user``` config will disable Last.fm integration.
 
 Usage
 -----
 
-From a terminal ```cd``` to the script and execute it like any other Python script with ```python PlayMusicCL.py```, you may also wish to create a new bash alias, allowing you to start the app with a simpler command, this can be done by adding the line ```alias gpm='python ~/apps/PlayMusicCL.py'``` to ```.bashrc``` in your home directory (or equivalent process for the shell you are using), this will allow you so start the script using the command ```gpm```.
+From a terminal: ```playmusiccl```
 
 Once the app is running you will then have access to the following commands:
 
@@ -62,3 +64,8 @@ To see all playlists: ```list plist```
 To see all tracks in playlist "Symphonic Metal": ```list plist "Symphonic Metal"```
 
 To add all tracks from playlist "Symphonic Metal" to queue: ```queue plist "Symphonic Metal"```
+
+Planned Features
+----------------
+
+*  Autocomplete, history and conventional "shell like" scrolling

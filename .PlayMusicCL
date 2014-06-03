@@ -1,0 +1,5 @@
+google_user test@example.com
+google_pass super_secure_password
+google_deviceid 0000000000000000
+lastfm_user testUser
+lastfm_pass more_secure_passwords

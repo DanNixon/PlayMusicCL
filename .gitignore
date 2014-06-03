@@ -1,0 +1,4 @@
+#Package stuff
+build/
+dist/
+playmusiccl.egg-info/
