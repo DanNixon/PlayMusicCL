@@ -4,7 +4,7 @@
 ## Command line client for Google Play Music
 ## Copyright: Dan Nixon 2012-14
 ## dan-nixon.com
-## Version: 0.5.1
+## Version: 0.5.2
 ## Date: 03/05/2014
 
 import thread, time, shlex, random, sys, os
@@ -639,7 +639,7 @@ def main():
 
 	if("lastfm_user" in config):
 		print "Logging in to Last.fm..."
-	__LastFm__ = LastfmScrobbler(config.get("lastfm_user", ""), config.get("lastfm_pass", ""), ("lastfm__user" in config))
+	__LastFm__ = LastfmScrobbler(config.get("lastfm_user", ""), config.get("lastfm_pass", ""), ("lastfm_user" in config))
 
 	print "Creating GStreamer player..."
 	__MediaPlayer__ = MediaPlayer()

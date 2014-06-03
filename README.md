@@ -8,7 +8,7 @@ This script requires Simon Weber's [Google Play Music API](https://github.com/si
 Install/Configuration
 ---------------------
 
-Install using ```python setup.py install```.
+Install using ```python setup.py install``` or (easier) ```pip install playmusiccl```.
 
 Configuration is done in the ```.PlayMusicCL``` file stored in the home directory (see example), the ```google_user``` and ```google_device_id``` are the minimum required keys for the app to function.   
 Password configs can be omitted and the password requested when the app starts.   
