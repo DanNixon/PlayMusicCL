@@ -2,3 +2,4 @@
 build/
 dist/
 playmusiccl.egg-info/
+*.pyc

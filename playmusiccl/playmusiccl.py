@@ -591,7 +591,7 @@ def cl_print(console_string, *args):
 def get_config():
 	config = dict()
 	try:
-		with open(os.path.expanduser("~/.PlayMusicCL")) as conf_file:
+		with open(os.path.expanduser("~/.playmusicclrc")) as conf_file:
 			conf_lines = conf_file.readlines()
 			for line in conf_lines:
 				data = line.split()
@@ -619,7 +619,7 @@ def get_config():
 			# print "Config file error"
 			# sys.exit(1)
 	except IOError:
-		print "Can't find ~/.PlayMusicCL"
+		print "Can't find ~/.playmusicclrc"
 		sys.exit(1);
 	return config
 
@@ -654,10 +654,3 @@ def main():
 	while __Run__:
 		__CLH__.parse_cl(raw_input())
 	thread.exit()
-
-def run():
-	gobject.threads_init()
-	main()
-
-if __name__ == "__main__":
-	run()
