@@ -56,7 +56,7 @@ class GPMClient(object):
 		self.playlists = dict()
 		self.library = dict()
 
-	def __del__(self):
+	def logout(self):
 		self.__api.logout()
 
 	def update_local_lib(self):
@@ -653,4 +653,7 @@ def main():
 	__Run__ = True
 	while __Run__:
 		__CLH__.parse_cl(raw_input())
+
+	__MusicClient__.logout()
+
 	thread.exit()
