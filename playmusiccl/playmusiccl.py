@@ -97,7 +97,7 @@ class GPMClient(object):
 				if album == self.all_songs_album_title:
 					sorted_album = sorted(self.library[artist][album], key=lambda k: k['title'])
 				else:
-					sorted_album = sorted(self.library[artist][album], key=lambda k: k['trackNumber'])
+					sorted_album = sorted(self.library[artist][album], key=lambda k: k.get('trackNumber', 0))
 				self.library[artist][album] = sorted_album
 
 		#	Get all playlists
