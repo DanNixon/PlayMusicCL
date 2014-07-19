@@ -7,7 +7,7 @@
 ## Version: 0.5.2
 ## Date: 03/05/2014
 
-import thread, time, shlex, random, sys, os
+import thread, time, shlex, random, sys, os, readline
 from gmusicapi import Mobileclient
 from getpass import getpass
 import gobject, glib
@@ -631,6 +631,9 @@ def main():
 	global __Run__
 	title_string = "\x1b]2;Google Play Music\x07"
 	sys.stdout.write(title_string)
+
+	readline.parse_and_bind('tab: complete')
+	readline.parse_and_bind('set editing-mode vi')
 
 	config = get_config()
 
