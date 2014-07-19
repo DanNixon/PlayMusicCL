@@ -7,7 +7,7 @@
 ## Version: 0.5.2
 ## Date: 03/05/2014
 
-import thread, time, shlex, random, sys, os, readline, atexit
+import thread, time, shlex, random, sys, os, readline, atexit, unicodedata
 from gmusicapi import Mobileclient
 from getpass import getpass
 import gobject, glib
@@ -316,6 +316,7 @@ class CommandCompleter(object):
 				self.current_candidates = sorted(self.options.keys())
 			else:
 				try:
+					# Get list of all possible candidates based on previous complete input
 					if begin == 0:
 						# Match list of commands
 						candidates = self.__basic_commands
@@ -329,12 +330,23 @@ class CommandCompleter(object):
 								if being_completed:
 									finished_words_len -= 1
 
-								# print finished_words_len
-
-								for case in switch(len(words)):
-									#TODO
+								for case in switch(finished_words_len):
+									# Listing/queueing artists (or the playlist selection command)
 									if case(1):
 										candidates = sorted(self.__library.keys())
+										candidates.insert(0, "plist")
+										break
+									# Listing/queueing albums or playlists
+									if case(2):
+										if words[1].upper() == "PLIST":
+											candidates = sorted(self.__playlists.keys())
+										else:
+											candidates = sorted(self.__library[words[1]].keys())
+										break
+									# Queueing tracks
+									if case(3):
+										if words[0].upper() == "QUEUE":
+											candidates = sorted([s['title'] for s in self.__library[words[1]][words[2]]])
 										break
 								break
 							# Add candidates for play mode selection
@@ -347,17 +359,15 @@ class CommandCompleter(object):
 										candidates = ["repeat", "norepeat"]
 										break
 
+					# Filter possible candidates based on partial completion
 					if being_completed:
 						# Match options with portion of input being completed
-						self.current_candidates = [w for w in candidates if w.startswith(being_completed)]
+						self.current_candidates = [c.replace(r' ', r'\ ') for c in candidates if c.startswith(being_completed)]
 					else:
 						# Matching empty string so use all candidates
-						self.current_candidates = candidates
-
+						self.current_candidates = [c.replace(r' ', r'\ ') for c in candidates]
 				except (KeyError, IndexError), err:
 					self.current_candidates = []
-	
-		# print self.current_candidates
 
 		try:
 			response = self.current_candidates[state]
