@@ -301,7 +301,7 @@ class CommandCompleter(object):
 	def __init__(self, library, playlists):
 		self.__library = library
 		self.__playlists = playlists
-		self.__basic_commands = ["play", "pause", "like", "love", "exit", "now", "next", "pmode", "list", "queue", "pam"]
+		self.__basic_commands = ["play", "pause", "like", "love", "exit", "now", "next", "pmode", "list", "queue", "pam", "clearqueue"]
 
 	def complete(self, text, state):
 		response = None
@@ -321,9 +321,31 @@ class CommandCompleter(object):
 						candidates = self.__basic_commands
 					else:
 						# Match based on previous commands
-						# TODO
-						first = words[0]
-						candidates = []
+						candiates = []
+						for case in switch(words[0].upper()):
+							# Add candidates for queueing or listing stuff
+							if case("QUEUE") or case("LIST"):
+								finished_words_len = len(words)
+								if being_completed:
+									finished_words_len -= 1
+
+								# print finished_words_len
+
+								for case in switch(len(words)):
+									#TODO
+									if case(1):
+										candidates = sorted(self.__library.keys())
+										break
+								break
+							# Add candidates for play mode selection
+							if case("PMODE"):
+								for case in switch(len(words)):
+									if case(1):
+										candidates = ["random", "linear"]
+										break
+									if case(2):
+										candidates = ["repeat", "norepeat"]
+										break
 
 					if being_completed:
 						# Match options with portion of input being completed
@@ -334,6 +356,8 @@ class CommandCompleter(object):
 
 				except (KeyError, IndexError), err:
 					self.current_candidates = []
+	
+		# print self.current_candidates
 
 		try:
 			response = self.current_candidates[state]
