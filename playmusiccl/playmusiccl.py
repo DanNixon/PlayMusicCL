@@ -7,7 +7,7 @@
 ## Version: 0.5.2
 ## Date: 03/05/2014
 
-import thread, time, shlex, random, sys, os, readline
+import thread, time, shlex, random, sys, os, readline, atexit
 from gmusicapi import Mobileclient
 from getpass import getpass
 import gobject, glib
@@ -312,6 +312,17 @@ class CommandLineHandler(object):
 
 	__SINGLE_PG_LEN = 20
 
+	def __init__(self, history_filename):
+		history_file = os.path.expanduser(history_filename)
+		try:
+		    readline.read_history_file(history_file)
+		except IOError:
+		    pass
+		atexit.register(readline.write_history_file, history_file)
+
+		readline.parse_and_bind('tab: complete')
+		readline.parse_and_bind('set editing-mode vi')
+
 	def __del__(self):
 		title_string = "\x1b]2;I played music once, but then I took a SIGTERM to the thread.\x07"
 		sys.stdout.write(title_string)
@@ -611,6 +622,12 @@ def get_config():
 					if case("lastfm_pass"):
 						config['lastfm_pass'] = data[1]
 						break
+					if case("history_file"):
+						config["history_file"] = data[1]
+						break;
+
+		if "history_file" not in config:
+			config["history_file"] = "~/.playmusiccl_history"
 		if "google_pass" not in config:
 			config["google_pass"] = getpass("Google password: ")
 		if "lastfm_pass" not in config and "lastfm_user" in config:
@@ -632,9 +649,6 @@ def main():
 	title_string = "\x1b]2;Google Play Music\x07"
 	sys.stdout.write(title_string)
 
-	readline.parse_and_bind('tab: complete')
-	readline.parse_and_bind('set editing-mode vi')
-
 	config = get_config()
 
 	print "Logging in to Google Play Music..."
@@ -649,7 +663,7 @@ def main():
 
 	print "Updating local library from Google Play Music..."
 	__MusicClient__.update_local_lib()
-	__CLH__ = CommandLineHandler()
+	__CLH__ = CommandLineHandler(config["history_file"])
 
 	print "Ready!"
 	print ""
