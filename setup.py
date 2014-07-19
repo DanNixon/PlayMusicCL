@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='playmusiccl',
-    version='0.5.4',
+    version='0.5.5',
     entry_points = {
 	'console_scripts': ['playmusiccl=playmusiccl:run'],
     },

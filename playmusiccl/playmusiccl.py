@@ -297,6 +297,50 @@ class LastfmScrobbler(object):
 		except:
 			pass
 
+class CommandCompleter(object):
+	def __init__(self, library, playlists):
+		self.__library = library
+		self.__playlists = playlists
+		self.__basic_commands = ["play", "pause", "like", "love", "exit", "now", "next", "pmode", "list", "queue", "pam"]
+
+	def complete(self, text, state):
+		response = None
+		if state == 0:
+			origline = readline.get_line_buffer()
+			begin = readline.get_begidx()
+			end = readline.get_endidx()
+			being_completed = origline[begin:end]
+			words = origline.split()
+
+			if not words:
+				self.current_candidates = sorted(self.options.keys())
+			else:
+				try:
+					if begin == 0:
+						# Match list of commands
+						candidates = self.__basic_commands
+					else:
+						# Match based on previous commands
+						# TODO
+						first = words[0]
+						candidates = []
+
+					if being_completed:
+						# Match options with portion of input being completed
+						self.current_candidates = [w for w in candidates if w.startswith(being_completed)]
+					else:
+						# Matching empty string so use all candidates
+						self.current_candidates = candidates
+
+				except (KeyError, IndexError), err:
+					self.current_candidates = []
+
+		try:
+			response = self.current_candidates[state]
+		except IndexError:
+			response = None
+		return response
+
 class CommandLineHandler(object):
 	__CON_PLISTS = 1
 	__CON_PLTRACKS = 2
@@ -312,7 +356,7 @@ class CommandLineHandler(object):
 
 	__SINGLE_PG_LEN = 20
 
-	def __init__(self, history_filename):
+	def __init__(self, history_filename, media_client):
 		history_file = os.path.expanduser(history_filename)
 		try:
 		    readline.read_history_file(history_file)
@@ -322,6 +366,7 @@ class CommandLineHandler(object):
 
 		readline.parse_and_bind('tab: complete')
 		readline.parse_and_bind('set editing-mode vi')
+		readline.set_completer(CommandCompleter(media_client.library, media_client.playlists).complete)
 
 	def __del__(self):
 		title_string = "\x1b]2;I played music once, but then I took a SIGTERM to the thread.\x07"
@@ -663,7 +708,7 @@ def main():
 
 	print "Updating local library from Google Play Music..."
 	__MusicClient__.update_local_lib()
-	__CLH__ = CommandLineHandler(config["history_file"])
+	__CLH__ = CommandLineHandler(config["history_file"], __MusicClient__)
 
 	print "Ready!"
 	print ""
