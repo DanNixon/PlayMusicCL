@@ -64,8 +64,3 @@ To see all playlists: ```list plist```
 To see all tracks in playlist "Symphonic Metal": ```list plist "Symphonic Metal"```
 
 To add all tracks from playlist "Symphonic Metal" to queue: ```queue plist "Symphonic Metal"```
-
-Planned Features
-----------------
-
-*  Autocomplete, history and conventional "shell like" scrolling
