@@ -1,16 +1,17 @@
 ﻿#!/usr/bin/python
 # -*- coding: utf_8 -*-
 
-## Command line client for Google Play Music
-## Copyright: Dan Nixon 2012-14
-## dan-nixon.com
-## Version: 0.5.2
-## Date: 03/05/2014
+# Command line client for Google Play Music
+# Copyright: Dan Nixon 2012-14
+# dan-nixon.com
+# Version: 0.5.2
+# Date: 03/05/2014
 
-import thread, time, shlex, random, sys, os, readline, atexit, unicodedata
+
+import thread, time, shlex, random, sys, os, readline, atexit
 from gmusicapi import Mobileclient
 from getpass import getpass
-import gobject, glib
+import glib
 import gst
 
 __MusicClient__ = None
@@ -19,6 +20,7 @@ __LastFm__ = None
 __CLH__ = None
 
 __Run__ = True
+
 
 class switch(object):
     def __init__(self, value):
@@ -63,8 +65,8 @@ class GPMClient(object):
         songs = self.__api.get_all_songs()
         self.playlists[self.thumbs_up_playlist_name] = list()
 
-        #    Get main library
-        song_map = dict()    
+        # Get main library
+        song_map = dict()
         for song in songs:
             if "rating" in song and song["rating"] == "5":
                 self.playlists[self.thumbs_up_playlist_name].append(song)
@@ -137,7 +139,7 @@ class MediaPlayer(object):
         self.__player.set_state(gst.STATE_NULL)
 
     def player_thread(self):
-        if self.__player == None:
+        if self.__player is None:
             self.__player = gst.element_factory_make("playbin2", "player")
             self.__player.set_state(gst.STATE_NULL)
             bus = self.__player.get_bus()
@@ -145,7 +147,7 @@ class MediaPlayer(object):
             bus.connect("message", self.handle_song_end)
             glib.MainLoop().run()
 
-    def handle_song_end(self, bus, message):
+    def handle_song_end(self, _, message):
         if message.type == gst.MESSAGE_EOS:
             self.next(1)
 
@@ -165,7 +167,7 @@ class MediaPlayer(object):
             print "No song playing."
 
     def set_terminal_title(self):
-        if self.now_playing_song == None or self.__player.get_state()[1] == gst.STATE_PAUSED:
+        if self.now_playing_song is None or self.__player.get_state()[1] == gst.STATE_PAUSED:
             sys.stdout.write("\x1b]2;Google Play Music\x07")
             return
         title_string = "\x1b]2;{0} - {1}\x07".format(
@@ -251,7 +253,7 @@ class LastfmScrobbler(object):
         self.enabled = use
 
     def love_song(self, song):
-        if not song == None and self.enabled:
+        if not song is None and self.enabled:
             print "Loving {0} by {1} on Last.fm.".format(
                     song["title"].encode("utf-8"), song["artist"].encode("utf-8"))
             thread.start_new_thread(self.__love, (song,))
@@ -270,7 +272,7 @@ class LastfmScrobbler(object):
             print "Error loving song on Last.fm"
 
     def update_now_playing(self, song):
-        if not song == None and self.enabled:
+        if not song is None and self.enabled:
             thread.start_new_thread(self.__now_playing, (song,))
 
     def __now_playing(self, song):
@@ -284,7 +286,7 @@ class LastfmScrobbler(object):
             pass
 
     def scrobble(self, song):
-        if not song == None and self.enabled:
+        if not song is None and self.enabled:
             thread.start_new_thread(self.__scrobble, (song,))
 
     def __scrobble(self, song):
@@ -313,7 +315,7 @@ class CommandCompleter(object):
             words = origline.split()
 
             if not words:
-                self.current_candidates = sorted(self.options.keys())
+                self.current_candidates = sorted(self.__basic_commands)
             else:
                 try:
                     # Get list of all possible candidates based on previous complete input
@@ -322,7 +324,7 @@ class CommandCompleter(object):
                         candidates = self.__basic_commands
                     else:
                         # Match based on previous commands
-                        candiates = []
+                        candidates = []
                         for case in switch(words[0].upper()):
                             # Add candidates for queueing or listing stuff
                             if case("QUEUE") or case("LIST"):
@@ -366,7 +368,7 @@ class CommandCompleter(object):
                     else:
                         # Matching empty string so use all candidates
                         self.current_candidates = [c.replace(r' ', r'\ ') for c in candidates]
-                except (KeyError, IndexError), err:
+                except (KeyError, IndexError), _:
                     self.current_candidates = []
 
         try:
@@ -675,7 +677,7 @@ class CommandLineHandler(object):
                 print "Play mode: Random, Repeat"
                 break
 
-def cl_print(console_string, *args):
+def cl_print(console_string, _):
     print console_string
 
 def get_config():
