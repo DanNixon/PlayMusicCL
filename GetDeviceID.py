@@ -1,12 +1,14 @@
 #!/usr/bin/python
 
-#	Google Play Music device ID grabber
-#	Used to get a device ID from the Google Music API to use with the Mobileclient
-#	dan-nixon.com
-#	Date: 04/03/2014
+# Google Play Music device ID grabber
+# Used to get a device ID from the Google Music API to use with the Mobileclient
+# dan-nixon.com
+# Date: 04/03/2014
+
 
 import gmusicapi
 from getpass import getpass
+
 
 print "Username: ",
 user = raw_input()

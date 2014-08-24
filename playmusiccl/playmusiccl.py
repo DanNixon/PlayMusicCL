@@ -158,11 +158,10 @@ class MediaPlayer(object):
 
     def print_current_song(self):
         song = self.now_playing_song
-        if not song is None:
+        if song is not None:
             track = __MediaPlayer__.now_playing_song["title"]
             artist = __MediaPlayer__.now_playing_song["artist"]
-            print "Now playing {0} by {1}".format(
-                    track.encode("utf-8"), artist.encode("utf-8"))
+            print "Now playing {0} by {1}".format(track.encode("utf-8"), artist.encode("utf-8"))
         else:
             print "No song playing."
 
@@ -170,9 +169,8 @@ class MediaPlayer(object):
         if self.now_playing_song is None or self.__player.get_state()[1] == gst.STATE_PAUSED:
             sys.stdout.write("\x1b]2;Google Play Music\x07")
             return
-        title_string = "\x1b]2;{0} - {1}\x07".format(
-                self.now_playing_song["title"].encode("utf-8"),
-                self.now_playing_song["artist"].encode("utf-8"))
+        title_string = "\x1b]2;{0} - {1}\x07".format(self.now_playing_song["title"].encode("utf-8"),
+                                                     self.now_playing_song["artist"].encode("utf-8"))
         thread.start_new_thread(cl_print, (title_string, 1))
 
 
@@ -247,15 +245,16 @@ class LastfmScrobbler(object):
         if use:
             import pylast
             password_hash = pylast.md5(password)
-            self.__session = pylast.LastFMNetwork(
-                    api_key = self.__api_key, api_secret = self.__api_secret,
-                    username = username, password_hash = password_hash)
+            self.__session = pylast.LastFMNetwork(api_key = self.__api_key,
+                                                  api_secret = self.__api_secret,
+                                                  username = username,
+                                                  password_hash = password_hash)
         self.enabled = use
 
     def love_song(self, song):
-        if not song is None and self.enabled:
-            print "Loving {0} by {1} on Last.fm.".format(
-                    song["title"].encode("utf-8"), song["artist"].encode("utf-8"))
+        if song is not None and self.enabled:
+            print "Loving {0} by {1} on Last.fm.".format(song["title"].encode("utf-8"),
+                                                         song["artist"].encode("utf-8"))
             thread.start_new_thread(self.__love, (song,))
         else:
             print "No song playing or Last.fm disabled."
@@ -272,7 +271,7 @@ class LastfmScrobbler(object):
             print "Error loving song on Last.fm"
 
     def update_now_playing(self, song):
-        if not song is None and self.enabled:
+        if song is not None and self.enabled:
             thread.start_new_thread(self.__now_playing, (song,))
 
     def __now_playing(self, song):
@@ -286,7 +285,7 @@ class LastfmScrobbler(object):
             pass
 
     def scrobble(self, song):
-        if not song is None and self.enabled:
+        if song is not None and self.enabled:
             thread.start_new_thread(self.__scrobble, (song,))
 
     def __scrobble(self, song):
@@ -305,7 +304,7 @@ class CommandCompleter(object):
         self.__playlists = playlists
         self.__basic_commands = ["play", "pause", "like", "love", "exit", "now", "next", "pmode", "list", "queue", "pam", "clearqueue"]
 
-    def complete(self, text, state):
+    def complete(self, _, state):
         response = None
         if state == 0:
             origline = readline.get_line_buffer()
