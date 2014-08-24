@@ -5,7 +5,7 @@ A command line client for Google Play Music.
 
 This script requires Simon Weber's [Google Play Music API](https://github.com/simon-weber/Unofficial-Google-Music-API) (currently the ```develop``` branch is needed to enable Thumbs Up from ```Mobileclient```) and if Last.fm features are desired, [PyLast](https://code.google.com/p/pylast/) both of which are installed using ```setup.py```.
 
-[![Code Health](https://landscape.io/github/DanNixon/RokuRTerm/master/landscape.png)](https://landscape.io/github/DanNixon/RokuRTerm/master)
+[![Code Health](https://landscape.io/github/DanNixon/PlayMusicCL/master/landscape.png)](https://landscape.io/github/DanNixon/PlayMusicCL/master)
 
 Install/Configuration
 ---------------------
