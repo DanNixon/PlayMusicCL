@@ -2,10 +2,6 @@
 # -*- coding: utf_8 -*-
 
 # Command line client for Google Play Music
-# Copyright: Dan Nixon 2012-14
-# dan-nixon.com
-# Version: 0.5.2
-# Date: 03/05/2014
 
 
 import thread, time, shlex, random, sys, os, readline, atexit
@@ -108,8 +104,11 @@ class GPMClient(object):
             plist_name = plist["name"]
             self.playlists[plist_name] = list()
             for track in plist["tracks"]:
-                song = song_map[track["trackId"]]
-                self.playlists[plist_name].append(song)
+                try:
+                    song = song_map[track["trackId"]]
+                    self.playlists[plist_name].append(song)
+                except IndexError:
+                    pass
 
     def get_stream_url(self, song):
         return self.__api.get_stream_url(song["id"], self.__device_id)
