@@ -10,10 +10,6 @@ from getpass import getpass
 import glib
 import gst
 
-# Suppresses urllib3 warning spam
-import warnings
-warnings.filterwarnings("ignore")
-
 __MusicClient__ = None
 __MediaPlayer__ = None
 __LastFm__ = None
