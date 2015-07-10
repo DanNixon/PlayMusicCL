@@ -47,7 +47,7 @@ class GPMClient(object):
 
         attempts = 0
         while not self.logged_in and attempts < 3:
-            self.logged_in = self.__api.login(email, password)
+            self.logged_in = self.__api.login(email, password, device_id)
             attempts += 1
 
         self.all_tracks = dict()
@@ -98,17 +98,18 @@ class GPMClient(object):
                     sorted_album = sorted(self.library[artist][album], key=lambda k: k.get('trackNumber', 0))
                 self.library[artist][album] = sorted_album
 
-        #    Get all playlists
+        # Get all playlists
         plists = self.__api.get_all_user_playlist_contents()
         for plist in plists:
             plist_name = plist["name"]
             self.playlists[plist_name] = list()
             for track in plist["tracks"]:
-                try:
+                if not track["trackId"] in song_map:
+                    song = song_map[track["trackId"]] = track["track"]
+                    song["id"] = track["trackId"]
+                else:
                     song = song_map[track["trackId"]]
-                    self.playlists[plist_name].append(song)
-                except IndexError:
-                    pass
+                self.playlists[plist_name].append(song)
 
     def get_stream_url(self, song):
         return self.__api.get_stream_url(song["id"], self.__device_id)
