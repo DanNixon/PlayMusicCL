@@ -15,8 +15,6 @@ __MediaPlayer__ = None
 __LastFm__ = None
 __CLH__ = None
 
-__Run__ = True
-
 #==============================================================================
 
 class Switch(object):
@@ -96,11 +94,11 @@ class GPMClient(object):
             if song_album == "":
                 song_album = "Unknown Album"
 
-            if not song_artist in self.library:
+            if song_artist not in self.library:
                 self.library[song_artist] = dict()
                 self.library[song_artist][self.all_songs_album_title] = list()
 
-            if not song_album in self.library[song_artist]:
+            if song_album not in self.library[song_artist]:
                 self.library[song_artist][song_album] = list()
 
             self.library[song_artist][song_album].append(song)
@@ -123,7 +121,7 @@ class GPMClient(object):
             plist_name = plist["name"]
             self.playlists[plist_name] = list()
             for track in plist["tracks"]:
-                if not track["trackId"] in song_map:
+                if track["trackId"] not in song_map:
                     song = song_map[track["trackId"]] = track["track"]
                     song["id"] = track["trackId"]
                 else:
@@ -229,7 +227,8 @@ class MediaPlayer(object):
             self.now_playing_song = song
             self.print_current_song()
             self.set_terminal_title()
-            __LastFm__.update_now_playing(song)
+            if __LastFm__ is not None:
+                __LastFm__.update_now_playing(song)
         except AttributeError:
             print "Player error!"
 
@@ -287,7 +286,8 @@ class MediaPlayer(object):
 #------------------------------------------------------------------------------
 
     def next(self, n_offset):
-        __LastFm__.scrobble(self.now_playing_song)
+        if __LastFm__ is not None:
+            __LastFm__.scrobble(self.now_playing_song)
         self.stop()
         self.__play_next_in_queue(n_offset)
 
@@ -502,7 +502,7 @@ class CommandLineHandler(object):
         if len(in_string) is 0:
             __MediaPlayer__.print_current_song()
             print ""
-            return
+            return True
         function = None
         try:
             args = shlex.split(in_string)
@@ -526,18 +526,19 @@ class CommandLineHandler(object):
                 break
             if case("P"):
                 self.parse_cl("PLAY")
-                return
+                break
             if case("LIKE"):
-                __LastFm__.love_song(__MediaPlayer__.now_playing_song)
+                if __LastFm__ is not None:
+                    __LastFm__.love_song(__MediaPlayer__.now_playing_song)
                 __MusicClient__.rate_song(__MediaPlayer__.now_playing_song, 5)
                 print ""
                 break
             if case("LOVE"):
                 self.parse_cl("LIKE")
-                return
+                break
             if case("L"):
                 self.parse_cl("LIKE")
-                return
+                break
             if case("PMODE"):
                 self.pm_handler(args)
                 print ""
@@ -553,7 +554,7 @@ class CommandLineHandler(object):
                 break
             if case("N"):
                 self.parse_cl("NEXT")
-                return
+                break
             if case("NOW"):
                 __MediaPlayer__.print_current_song()
                 print ""
@@ -574,12 +575,12 @@ class CommandLineHandler(object):
                 break
             if case("EXIT"):
                 print "じゃね"
-                global __Run__
-                __Run__ = False
+                return False
                 break
             if case():
                 print "Argument error!"
                 print ""
+        return True
 
 #------------------------------------------------------------------------------
 
@@ -847,7 +848,6 @@ def main():
     global __LastFm__
     global __MediaPlayer__
     global __CLH__
-    global __Run__
     title_string = "\x1b]2;Google Play Music\x07"
     sys.stdout.write(title_string)
 
@@ -873,10 +873,12 @@ def main():
 
     print "Ready!"
     print ""
-    __Run__ = True
-    while __Run__:
-        __CLH__.parse_cl(raw_input())
+
+    try:
+        while __CLH__.parse_cl(raw_input()):
+            pass
+    except KeyboardInterrupt:
+        __CLH__.parse_cl("EXIT")
 
     __MusicClient__.logout()
-
     thread.exit()
