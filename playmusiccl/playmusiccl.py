@@ -1,8 +1,8 @@
 ﻿#!/usr/bin/python
 # -*- coding: utf_8 -*-
-
-# Command line client for Google Play Music
-
+"""
+Command line client for Google Play Music
+"""
 
 import thread, time, shlex, random, sys, os, readline, atexit
 from gmusicapi import Mobileclient
@@ -17,8 +17,13 @@ __CLH__ = None
 
 __Run__ = True
 
+#==============================================================================
 
-class switch(object):
+class Switch(object):
+    """
+    Provides switch-case like functionality.
+    """
+
     def __init__(self, value):
         self.value = value
         self.fall = False
@@ -36,9 +41,17 @@ class switch(object):
         else:
             return False
 
+#==============================================================================
+
 class GPMClient(object):
+    """
+    Google Play Music client.
+    """
+
     all_songs_album_title = "All Songs"
     thumbs_up_playlist_name = "Thumbs Up"
+
+#------------------------------------------------------------------------------
 
     def __init__(self, email, password, device_id):
         self.__api = Mobileclient()
@@ -54,8 +67,12 @@ class GPMClient(object):
         self.playlists = dict()
         self.library = dict()
 
+#------------------------------------------------------------------------------
+
     def logout(self):
         self.__api.logout()
+
+#------------------------------------------------------------------------------
 
     def update_local_lib(self):
         songs = self.__api.get_all_songs()
@@ -79,11 +96,11 @@ class GPMClient(object):
             if song_album == "":
                 song_album = "Unknown Album"
 
-            if not (song_artist in self.library):
+            if not song_artist in self.library:
                 self.library[song_artist] = dict()
                 self.library[song_artist][self.all_songs_album_title] = list()
 
-            if not (song_album in self.library[song_artist]):
+            if not song_album in self.library[song_artist]:
                 self.library[song_artist][song_album] = list()
 
             self.library[song_artist][song_album].append(song)
@@ -93,9 +110,11 @@ class GPMClient(object):
         for artist in self.library.keys():
             for album in self.library[artist].keys():
                 if album == self.all_songs_album_title:
-                    sorted_album = sorted(self.library[artist][album], key=lambda k: k['title'])
+                    sorted_album = sorted(self.library[artist][album],
+                                          key=lambda k: k['title'])
                 else:
-                    sorted_album = sorted(self.library[artist][album], key=lambda k: k.get('trackNumber', 0))
+                    sorted_album = sorted(self.library[artist][album],
+                                          key=lambda k: k.get('trackNumber', 0))
                 self.library[artist][album] = sorted_album
 
         # Get all playlists
@@ -111,19 +130,31 @@ class GPMClient(object):
                     song = song_map[track["trackId"]]
                 self.playlists[plist_name].append(song)
 
+#------------------------------------------------------------------------------
+
     def get_stream_url(self, song):
         return self.__api.get_stream_url(song["id"], self.__device_id)
+
+#------------------------------------------------------------------------------
 
     def rate_song(self, song, rating):
         try:
             song["rating"] = rating
             song_list = [song]
             self.__api.change_song_metadata(song_list)
-            print "Gave a Thumbs Up to {0} by {1} on Google Play.".format(song["title"].encode("utf-8"), song["artist"].encode("utf-8"))
-        except:
+            print "Gave a Thumbs Up to {0} by {1} on Google Play.".format(
+                   song["title"].encode("utf-8"),
+                   song["artist"].encode("utf-8"))
+        except RuntimeError:
             print "Error giving a Thumbs Up on Google Play."
 
+#==============================================================================
+
 class MediaPlayer(object):
+    """
+    Media player wrapper arounf glib.
+    """
+
     def __init__(self):
         self.__player = None
 
@@ -134,9 +165,13 @@ class MediaPlayer(object):
 
         thread.start_new_thread(self.player_thread, ())
 
+#------------------------------------------------------------------------------
+
     def __del__(self):
         self.now_playing_song = None
         self.__player.set_state(gst.STATE_NULL)
+
+#------------------------------------------------------------------------------
 
     def player_thread(self):
         if self.__player is None:
@@ -147,32 +182,44 @@ class MediaPlayer(object):
             bus.connect("message", self.handle_song_end)
             glib.MainLoop().run()
 
+#------------------------------------------------------------------------------
+
     def handle_song_end(self, _, message):
         if message.type == gst.MESSAGE_EOS:
             self.next(1)
+
+#------------------------------------------------------------------------------
 
     def clear_queue(self):
         self.stop()
         self.queue = list()
         self.queue_index = -1
 
+#------------------------------------------------------------------------------
+
     def print_current_song(self):
         song = self.now_playing_song
         if song is not None:
             track = __MediaPlayer__.now_playing_song["title"]
             artist = __MediaPlayer__.now_playing_song["artist"]
-            print "Now playing {0} by {1}".format(track.encode("utf-8"), artist.encode("utf-8"))
+            print "Now playing {0} by {1}".format(
+                   track.encode("utf-8"),
+                   artist.encode("utf-8"))
         else:
             print "No song playing."
+
+#------------------------------------------------------------------------------
 
     def set_terminal_title(self):
         if self.now_playing_song is None or self.__player.get_state()[1] == gst.STATE_PAUSED:
             sys.stdout.write("\x1b]2;Google Play Music\x07")
             return
-        title_string = "\x1b]2;{0} - {1}\x07".format(self.now_playing_song["title"].encode("utf-8"),
-                                                     self.now_playing_song["artist"].encode("utf-8"))
+        title_string = "\x1b]2;{0} - {1}\x07".format(
+                self.now_playing_song["title"].encode("utf-8"),
+                self.now_playing_song["artist"].encode("utf-8"))
         thread.start_new_thread(cl_print, (title_string, 1))
 
+#------------------------------------------------------------------------------
 
     def play(self, song):
         song_url = __MusicClient__.get_stream_url(song)
@@ -185,6 +232,8 @@ class MediaPlayer(object):
             __LastFm__.update_now_playing(song)
         except AttributeError:
             print "Player error!"
+
+#------------------------------------------------------------------------------
 
     def toggle_playback(self):
         try:
@@ -203,6 +252,8 @@ class MediaPlayer(object):
         except AttributeError:
             print "Player error!"
 
+#------------------------------------------------------------------------------
+
     def stop(self):
         try:
             self.__player.set_state(gst.STATE_NULL)
@@ -210,6 +261,7 @@ class MediaPlayer(object):
         except AttributeError:
             print "Player error!"
 
+#------------------------------------------------------------------------------
 
     def __play_next_in_queue(self, n_offset):
         if (self.play_mode % 2) == 0:
@@ -227,15 +279,25 @@ class MediaPlayer(object):
                 self.stop()
                 self.set_terminal_title()
 
+#------------------------------------------------------------------------------
+
     def add_to_queue(self, song):
         self.queue.append(song)
+
+#------------------------------------------------------------------------------
 
     def next(self, n_offset):
         __LastFm__.scrobble(self.now_playing_song)
         self.stop()
         self.__play_next_in_queue(n_offset)
 
+#==============================================================================
+
 class LastfmScrobbler(object):
+    """
+    Client for Last.fm integration.
+    """
+
     def __init__(self, username, password, use):
         self.__api_key = "a0790cb91b8799b0eda1f60d3924b676"
         self.__api_secret = "5007f138c5fef4278f36c70d760f24b7"
@@ -245,19 +307,24 @@ class LastfmScrobbler(object):
         if use:
             import pylast
             password_hash = pylast.md5(password)
-            self.__session = pylast.LastFMNetwork(api_key = self.__api_key,
-                                                  api_secret = self.__api_secret,
-                                                  username = username,
-                                                  password_hash = password_hash)
+            self.__session = pylast.LastFMNetwork(api_key=self.__api_key,
+                                                  api_secret=self.__api_secret,
+                                                  username=username,
+                                                  password_hash=password_hash)
         self.enabled = use
+
+#------------------------------------------------------------------------------
 
     def love_song(self, song):
         if song is not None and self.enabled:
-            print "Loving {0} by {1} on Last.fm.".format(song["title"].encode("utf-8"),
-                                                         song["artist"].encode("utf-8"))
+            print "Loving {0} by {1} on Last.fm.".format(
+                    song["title"].encode("utf-8"),
+                    song["artist"].encode("utf-8"))
             thread.start_new_thread(self.__love, (song,))
         else:
             print "No song playing or Last.fm disabled."
+
+#------------------------------------------------------------------------------
 
     def __love(self, song):
         title = song['title']
@@ -267,12 +334,16 @@ class LastfmScrobbler(object):
         try:
             track = self.__session.get_track(artist, title)
             track.love()
-        except:
+        except RuntimeError:
             print "Error loving song on Last.fm"
+
+#------------------------------------------------------------------------------
 
     def update_now_playing(self, song):
         if song is not None and self.enabled:
             thread.start_new_thread(self.__now_playing, (song,))
+
+#------------------------------------------------------------------------------
 
     def __now_playing(self, song):
         title = song['title']
@@ -281,12 +352,16 @@ class LastfmScrobbler(object):
             artist = "Unknown Artist"
         try:
             self.__session.update_now_playing(artist, title)
-        except:
+        except RuntimeError:
             pass
+
+#------------------------------------------------------------------------------
 
     def scrobble(self, song):
         if song is not None and self.enabled:
             thread.start_new_thread(self.__scrobble, (song,))
+
+#------------------------------------------------------------------------------
 
     def __scrobble(self, song):
         title = song['title']
@@ -295,14 +370,23 @@ class LastfmScrobbler(object):
             artist = "Unknown Artist"
         try:
             self.__session.scrobble(artist, title, int(time.time()))
-        except:
+        except RuntimeError:
             pass
 
+#==============================================================================
+
 class CommandCompleter(object):
+    """
+    Provides autocompletionm for command line interface.
+    """
+
     def __init__(self, library, playlists):
         self.__library = library
         self.__playlists = playlists
         self.__basic_commands = ["play", "pause", "like", "love", "exit", "now", "next", "pmode", "list", "queue", "pam", "clearqueue"]
+        self.current_candidates = []
+
+#------------------------------------------------------------------------------
 
     def complete(self, _, state):
         response = None
@@ -324,14 +408,14 @@ class CommandCompleter(object):
                     else:
                         # Match based on previous commands
                         candidates = []
-                        for case in switch(words[0].upper()):
+                        for case in Switch(words[0].upper()):
                             # Add candidates for queueing or listing stuff
                             if case("QUEUE") or case("LIST"):
                                 finished_words_len = len(words)
                                 if being_completed:
                                     finished_words_len -= 1
 
-                                for case in switch(finished_words_len):
+                                for case in Switch(finished_words_len):
                                     # Listing/queueing artists (or the playlist selection command)
                                     if case(1):
                                         candidates = sorted(self.__library.keys())
@@ -352,7 +436,7 @@ class CommandCompleter(object):
                                 break
                             # Add candidates for play mode selection
                             if case("PMODE"):
-                                for case in switch(len(words)):
+                                for case in Switch(len(words)):
                                     if case(1):
                                         candidates = ["random", "linear"]
                                         break
@@ -367,7 +451,7 @@ class CommandCompleter(object):
                     else:
                         # Matching empty string so use all candidates
                         self.current_candidates = [c.replace(r' ', r'\ ') for c in candidates]
-                except (KeyError, IndexError), _:
+                except (KeyError, IndexError):
                     self.current_candidates = []
 
         try:
@@ -376,7 +460,13 @@ class CommandCompleter(object):
             response = None
         return response
 
+#==============================================================================
+
 class CommandLineHandler(object):
+    """
+    Provides command line interface.
+    """
+
     __CON_PLISTS = 1
     __CON_PLTRACKS = 2
     __CON_ARTISTS = 3
@@ -391,6 +481,8 @@ class CommandLineHandler(object):
 
     __SINGLE_PG_LEN = 20
 
+#------------------------------------------------------------------------------
+
     def __init__(self, history_filename, media_client):
         history_file = os.path.expanduser(history_filename)
         try:
@@ -401,11 +493,10 @@ class CommandLineHandler(object):
 
         readline.parse_and_bind('tab: complete')
         readline.parse_and_bind('set editing-mode vi')
-        readline.set_completer(CommandCompleter(media_client.library, media_client.playlists).complete)
+        readline.set_completer(CommandCompleter(media_client.library,
+                               media_client.playlists).complete)
 
-    def __del__(self):
-        title_string = "\x1b]2;I played music once, but then I took a SIGTERM to the thread.\x07"
-        sys.stdout.write(title_string)
+#------------------------------------------------------------------------------
 
     def parse_cl(self, in_string):
         if len(in_string) is 0:
@@ -418,13 +509,13 @@ class CommandLineHandler(object):
             function = args[0].upper()
         except IndexError:
             pass
-        for case in switch(function):
+        for case in Switch(function):
             if case("LIST"):
                 self.list_handler(args)
                 print ""
                 break
             if case("QUEUE"):
-                self.queueHandler(args)
+                self.queue_handler(args)
                 print ""
                 break
             if case("PAUSE"):
@@ -490,10 +581,12 @@ class CommandLineHandler(object):
                 print "Argument error!"
                 print ""
 
-    def queueHandler(self, args):
+#------------------------------------------------------------------------------
+
+    def queue_handler(self, args):
         function = 0
         page_no = 0
-        for case in switch(len(args)):
+        for case in Switch(len(args)):
             if case(1):
                 function = self.__QF_LIST
                 page_no = 1
@@ -514,15 +607,18 @@ class CommandLineHandler(object):
             if case(4):
                 function = self.__QF_ADDTRA
                 break
-        for case in switch(function):
+        for case in Switch(function):
             if case(self.__QF_LIST):
                 queue = __MediaPlayer__.queue
-                print "Tracks in queue (page {0}/{1})".format(page_no, ((len(queue) / self.__SINGLE_PG_LEN) + 1))
+                print "Tracks in queue (page {0}/{1})".format(page_no,
+                        ((len(queue) / self.__SINGLE_PG_LEN) + 1))
                 lower_bound = (page_no - 1) * self.__SINGLE_PG_LEN
                 upper_bound = page_no * self.__SINGLE_PG_LEN
                 for i in range(lower_bound, upper_bound):
                     try:
-                        print "{0} - {1}".format(queue[i]["artist"].encode("utf-8"), queue[i]["title"].encode("utf-8"))
+                        print "{0} - {1}".format(
+                                queue[i]["artist"].encode("utf-8"),
+                                queue[i]["title"].encode("utf-8"))
                     except IndexError:
                         pass
                 break
@@ -531,7 +627,8 @@ class CommandLineHandler(object):
                     playlist = __MusicClient__.playlists[args[2]]
                     for song in playlist:
                         __MediaPlayer__.add_to_queue(song)
-                    print "Added {0} tracks from {1} to queue".format(len(playlist), args[2])
+                    print "Added {0} tracks from {1} to queue".format(
+                            len(playlist), args[2])
                 except KeyError:
                     print "Cannot find playlist."
                 break
@@ -543,7 +640,8 @@ class CommandLineHandler(object):
                         for song in artist[album]:
                             __MediaPlayer__.add_to_queue(song)
                             count += 1
-                    print "Added {0} tracks by {1} to queue".format(count, args[1])
+                    print "Added {0} tracks by {1} to queue".format(
+                            count, args[1])
                 except KeyError:
                     print "Cannot find artist."
                 break
@@ -554,7 +652,8 @@ class CommandLineHandler(object):
                     for song in album:
                         __MediaPlayer__.add_to_queue(song)
                         count += 1
-                    print "Added {0} tracks from {1} by {2} to queue".format(count, args[2], args[1])
+                    print "Added {0} tracks from {1} by {2} to queue".format(
+                            count, args[2], args[1])
                 except KeyError:
                     print "Cannot find artist or album."
                 break
@@ -568,7 +667,8 @@ class CommandLineHandler(object):
                             found = True
                             break
                     if found:
-                        print "Added {0} from {1} by {2} to queue".format(args[3], args[2], args[1])
+                        print "Added {0} from {1} by {2} to queue".format(
+                                args[3], args[2], args[1])
                     else:
                         print "Cannot find artist, album or track."
                 except KeyError:
@@ -576,6 +676,8 @@ class CommandLineHandler(object):
                 break
             if case():
                 print "Argument error."
+
+#------------------------------------------------------------------------------
 
     def list_handler(self, args):
         content_mode = 0
@@ -607,27 +709,33 @@ class CommandLineHandler(object):
         upper_bound = page_no * self.__SINGLE_PG_LEN
         display_content = None
         fault = False
-        for case in switch(content_mode):
+        for case in Switch(content_mode):
             if case(self.__CON_PLISTS):
                 display_content = sorted(__MusicClient__.playlists.keys())
-                print "All Playlists (page {0}/{1}):".format(page_no, ((len(display_content) / self.__SINGLE_PG_LEN) + 1))
+                print "All Playlists (page {0}/{1}):".format(
+                        page_no,
+                        ((len(display_content) / self.__SINGLE_PG_LEN) + 1))
                 break
             if case(self.__CON_PLTRACKS):
                 try:
                     display_content = __MusicClient__.playlists[playlist]
-                    print "Tracks in {0} playlist (page {1}/{2}):".format(playlist, page_no, ((len(display_content) / self.__SINGLE_PG_LEN) + 1))
-                except:
+                    print "Tracks in {0} playlist (page {1}/{2}):".format(
+                            playlist, page_no,
+                            ((len(display_content) / self.__SINGLE_PG_LEN) + 1))
+                except RuntimeError:
                     print "Cannot find artist or album."
                     fault = True
                 break
             if case(self.__CON_ARTISTS):
                 display_content = sorted(__MusicClient__.library.keys())
-                print "All Artists (page {0}/{1}):".format(page_no, ((len(display_content) / self.__SINGLE_PG_LEN) + 1))
+                print "All Artists (page {0}/{1}):".format(page_no,
+                        ((len(display_content) / self.__SINGLE_PG_LEN) + 1))
                 break
             if case(self.__CON_ALBUMS):
                 try:
                     display_content = sorted(__MusicClient__.library[artist].keys())
-                    print "All albums by {0} (page {1}/{2}):".format(artist, page_no, ((len(display_content) / self.__SINGLE_PG_LEN) + 1))
+                    print "All albums by {0} (page {1}/{2}):".format(artist,
+                            page_no, ((len(display_content) / self.__SINGLE_PG_LEN) + 1))
                 except KeyError:
                     print "Cannot find artist or album."
                     fault = True
@@ -635,7 +743,9 @@ class CommandLineHandler(object):
             if case(self.__CON_TRACKS):
                 try:
                     display_content = __MusicClient__.library[artist][album]
-                    print "All tracks in {0} by {1} (page {2}/{3}):".format(album, artist, page_no, ((len(display_content) / self.__SINGLE_PG_LEN) + 1))
+                    print "All tracks in {0} by {1} (page {2}/{3}):".format(
+                            album, artist, page_no,
+                            ((len(display_content) / self.__SINGLE_PG_LEN) + 1))
                 except KeyError:
                     print "Cannot find artist or album."
                     fault = True
@@ -651,6 +761,8 @@ class CommandLineHandler(object):
                 except IndexError:
                     pass
 
+#------------------------------------------------------------------------------
+
     def pm_handler(self, args):
         play_mode = 0
         if len(args) > 1:
@@ -662,7 +774,7 @@ class CommandLineHandler(object):
                 __MediaPlayer__.play_mode = play_mode
             except IndexError:
                 print "Argument error!"
-        for case in switch(__MediaPlayer__.play_mode):
+        for case in Switch(__MediaPlayer__.play_mode):
             if case(0):
                 print "Play mode: Linear, No Repeat"
                 break
@@ -676,10 +788,17 @@ class CommandLineHandler(object):
                 print "Play mode: Random, Repeat"
                 break
 
+#==============================================================================
+
 def cl_print(console_string, _):
     print console_string
 
+#------------------------------------------------------------------------------
+
 def get_config():
+    """
+    Reads the config file.
+    """
     config = dict()
     try:
         with open(os.path.expanduser("~/.playmusicclrc")) as conf_file:
@@ -687,7 +806,7 @@ def get_config():
             for line in conf_lines:
                 data = line.split()
                 if len(data) > 1:
-                    for case in switch(data[0]):
+                    for case in Switch(data[0]):
                         if case("google_user"):
                             config['google_user'] = data[1]
                             break
@@ -705,7 +824,7 @@ def get_config():
                             break
                         if case("history_file"):
                             config["history_file"] = data[1]
-                            break;
+                            break
 
         if "history_file" not in config:
             config["history_file"] = "~/.playmusiccl_history"
@@ -718,8 +837,10 @@ def get_config():
             # sys.exit(1)
     except IOError:
         print "Can't find ~/.playmusicclrc"
-        sys.exit(1);
+        sys.exit(1)
     return config
+
+#------------------------------------------------------------------------------
 
 def main():
     global __MusicClient__
@@ -733,11 +854,15 @@ def main():
     config = get_config()
 
     print "Logging in to Google Play Music..."
-    __MusicClient__ = GPMClient(config.get("google_user"), config.get("google_pass"), config.get("google_deviceid"))
+    __MusicClient__ = GPMClient(config.get("google_user"),
+                                config.get("google_pass"),
+                                config.get("google_deviceid"))
 
-    if("lastfm_user" in config):
+    if "lastfm_user" in config:
         print "Logging in to Last.fm..."
-    __LastFm__ = LastfmScrobbler(config.get("lastfm_user", ""), config.get("lastfm_pass", ""), ("lastfm_user" in config))
+        __LastFm__ = LastfmScrobbler(config.get("lastfm_user", ""),
+                                     config.get("lastfm_pass", ""),
+                                     ("lastfm_user" in config))
 
     print "Creating GStreamer player..."
     __MediaPlayer__ = MediaPlayer()
