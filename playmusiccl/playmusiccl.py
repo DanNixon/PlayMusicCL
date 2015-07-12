@@ -576,7 +576,6 @@ class CommandLineHandler(object):
             if case("EXIT"):
                 print "じゃね"
                 return False
-                break
             if case():
                 print "Argument error!"
                 print ""
