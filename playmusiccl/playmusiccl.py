@@ -240,11 +240,11 @@ class MediaPlayer(object):
             if player_state == gst.STATE_PAUSED:
                 self.__player.set_state(gst.STATE_PLAYING)
                 self.set_terminal_title()
-                print "Resumng playback."
+                print "Resuming playback."
             elif player_state == gst.STATE_PLAYING:
                 self.__player.set_state(gst.STATE_PAUSED)
                 self.set_terminal_title()
-                print "Pauseing playback."
+                print "Pausing playback."
                 print ""
             elif player_state == gst.STATE_NULL:
                 self.__play_next_in_queue(1)
