@@ -16,7 +16,9 @@ python-gst*` and RHEL with `sudo yum install gstreamer-python* python-mock`.
 Configuration is done in the `.playmusicclrc` file stored in the home
 directory (see example), the `google_user` and `google_device_id` are
 the minimum required keys for the app to function.  Password configs can be
-omitted and the password requested when the app starts.
+omitted and the password requested when the app starts (note that if using
+Google two factor authentication then you will need to create an application
+specific password).
 
 Omitting the `lastfm_user` config will disable Last.fm integration.
 
