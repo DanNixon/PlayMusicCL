@@ -8,22 +8,22 @@ A command line client for Google Play Music.
 Install/Configuration
 ---------------------
 
-Install using ```python setup.py install```, this installs the majority of
+Install using `python setup.py install`, this installs the majority of
 dependencies, however you will also need the Python GTK bindings (for GST) which
-can be installed on Debina basded systems with ```sudo apt-get install
-python-gst*```.
+can be installed on Debian basded systems with `sudo apt-get install
+python-gst*` and RHEL with `sudo yum install gstreamer-python* python-mock`.
 
-Configuration is done in the ```.playmusicclrc``` file stored in the home
-directory (see example), the ```google_user``` and ```google_device_id``` are
+Configuration is done in the `.playmusicclrc` file stored in the home
+directory (see example), the `google_user` and `google_device_id` are
 the minimum required keys for the app to function.  Password configs can be
 omitted and the password requested when the app starts.
 
-Omitting the ```lastfm_user``` config will disable Last.fm integration.
+Omitting the `lastfm_user` config will disable Last.fm integration.
 
 Usage
 -----
 
-From a terminal: ```playmusiccl```
+From a terminal: `playmusiccl`
 
 Once the app is running you will then have access to the following commands:
 
