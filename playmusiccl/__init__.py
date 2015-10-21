@@ -1,7 +1,8 @@
 from playmusiccl import *
 
-import gobject
+from gi.repository import GObject, Gst
 
 def run():
-	gobject.threads_init()
+	GObject.threads_init()
+	Gst.init(None)
 	main()
