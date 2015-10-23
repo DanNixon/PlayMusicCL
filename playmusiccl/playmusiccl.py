@@ -7,8 +7,8 @@ Command line client for Google Play Music
 import thread, time, shlex, random, sys, os, readline, atexit
 from gmusicapi import Mobileclient
 from getpass import getpass
-import glib
-import gst
+from gi.repository import GLib
+from gi.repository import Gst
 
 __MusicClient__ = None
 __MediaPlayer__ = None
@@ -167,23 +167,23 @@ class MediaPlayer(object):
 
     def __del__(self):
         self.now_playing_song = None
-        self.__player.set_state(gst.STATE_NULL)
+        self.__player.set_state(Gst.State.NULL)
 
 #------------------------------------------------------------------------------
 
     def player_thread(self):
         if self.__player is None:
-            self.__player = gst.element_factory_make("playbin2", "player")
-            self.__player.set_state(gst.STATE_NULL)
+            self.__player = Gst.ElementFactory.make("playbin", "player")
+            self.__player.set_state(Gst.State.NULL)
             bus = self.__player.get_bus()
             bus.add_signal_watch()
             bus.connect("message", self.handle_song_end)
-            glib.MainLoop().run()
+            GLib.MainLoop().run()
 
 #------------------------------------------------------------------------------
 
     def handle_song_end(self, _, message):
-        if message.type == gst.MESSAGE_EOS:
+        if message.type == Gst.MessageType.EOS:
             self.next(1)
 
 #------------------------------------------------------------------------------
@@ -209,7 +209,7 @@ class MediaPlayer(object):
 #------------------------------------------------------------------------------
 
     def set_terminal_title(self):
-        if self.now_playing_song is None or self.__player.get_state()[1] == gst.STATE_PAUSED:
+        if self.now_playing_song is None or self.__player.get_state(0)[1] == Gst.State.PAUSED:
             sys.stdout.write("\x1b]2;Google Play Music\x07")
             return
         title_string = "\x1b]2;{0} - {1}\x07".format(
@@ -223,7 +223,7 @@ class MediaPlayer(object):
         song_url = __MusicClient__.get_stream_url(song)
         try:
             self.__player.set_property("uri", song_url)
-            self.__player.set_state(gst.STATE_PLAYING)
+            self.__player.set_state(Gst.State.PLAYING)
             self.now_playing_song = song
             self.print_current_song()
             self.set_terminal_title()
@@ -236,17 +236,17 @@ class MediaPlayer(object):
 
     def toggle_playback(self):
         try:
-            player_state = self.__player.get_state()[1]
-            if player_state == gst.STATE_PAUSED:
-                self.__player.set_state(gst.STATE_PLAYING)
+            player_state = self.__player.get_state(0)[1]
+            if player_state == Gst.State.PAUSED:
+                self.__player.set_state(Gst.State.PLAYING)
                 self.set_terminal_title()
                 print "Resuming playback."
-            elif player_state == gst.STATE_PLAYING:
-                self.__player.set_state(gst.STATE_PAUSED)
+            elif player_state == Gst.State.PLAYING:
+                self.__player.set_state(Gst.State.PAUSED)
                 self.set_terminal_title()
                 print "Pausing playback."
                 print ""
-            elif player_state == gst.STATE_NULL:
+            elif player_state == Gst.State.NULL:
                 self.__play_next_in_queue(1)
         except AttributeError:
             print "Player error!"
@@ -255,7 +255,7 @@ class MediaPlayer(object):
 
     def stop(self):
         try:
-            self.__player.set_state(gst.STATE_NULL)
+            self.__player.set_state(Gst.State.NULL)
             self.now_playing_song = None
         except AttributeError:
             print "Player error!"
