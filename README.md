@@ -8,19 +8,24 @@ A command line client for Google Play Music.
 Install/Configuration
 ---------------------
 
-Install using `python setup.py install`, this installs the majority of
-dependencies, however you will also need the Python GTK bindings (for GST) which
-can be installed on Debian basded systems with `sudo apt-get install
-python-gst*` and RHEL with `sudo yum install gstreamer-python* python-mock`.
+Install using `python setup.py install`, which installs the majority of
+dependencies; however, you will also need the Python GTK bindings (for GST):
 
-Configuration is done in the `.playmusicclrc` file stored in the home
-directory (see example), the `google_user` and `google_device_id` are
-the minimum required keys for the app to function.  Password configs can be
-omitted and the password requested when the app starts (note that if using
-Google two factor authentication then you will need to create an application
-specific password).
+-	Debian-based systems: `sudo apt-get install python-gst*`
+-	RHEL: `sudo yum install gstreamer-python* python-mock`
+-	OS X: `brew install pygobject3 gstreamer`
 
-Omitting the `lastfm_user` config will disable Last.fm integration.
+Configure by copying the example config file to your home directory: `cp
+example.playmusicclrc ~/.playmusicclrc`, then edit as needed.  The minimum
+required settings are `google_user` and `google_device_id`. Use
+`GetDeviceID.py` to get the registered device IDs associated with your account,
+then use one of them (minus the leading '0x') as your `google_device_id`.  If
+no password is included in the config file, one will be requested when the app
+starts (note that if using Google two factor authentication then you will need
+to create an application specific password).
+
+Remove the `lastfm_` entries from the config file to disable Last.fm
+integration.
 
 Usage
 -----
