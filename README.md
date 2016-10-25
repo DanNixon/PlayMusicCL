@@ -5,6 +5,13 @@ A command line client for Google Play Music.
 
 [![Code Health](https://landscape.io/github/DanNixon/PlayMusicCL/master/landscape.png)](https://landscape.io/github/DanNixon/PlayMusicCL/master)
 
+*No longer maintained*
+----------------------
+
+This project is no longer actively maintained. I haven't really got the time
+needed to mainthin this and have since stopped using the client for my
+personal use.
+
 Install/Configuration
 ---------------------
 
